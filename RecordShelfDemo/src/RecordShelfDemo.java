@@ -1,5 +1,9 @@
 import javax.swing.*;
 import java.awt.*;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 
 public class RecordShelfDemo {
@@ -15,7 +19,10 @@ public class RecordShelfDemo {
     public static void main(String[] args) {
 
         // Hard coded demo data
-        users.add(new User("demo","demo"));
+        //users.add(new User("demo","demo"));
+
+        // Loads already existing users
+        loadUsers();
 
         albums.add(new Album("Abbey Road","The Beatles"));
         albums.add(new Album("Thriller","Michael Jackson"));
@@ -29,6 +36,53 @@ public class RecordShelfDemo {
         songs.add(new Song("Bohemian Rhapsody","Queen","A Night at the Opera"));
 
         SwingUtilities.invokeLater(() -> showLogin());
+    }
+
+    // -----------------------------
+    // Load Already Existing User Profiles
+    // -----------------------------
+    // Gets/loads user profiles from the user file
+    static void loadUsers(){
+        try{
+            BufferedReader reader = new BufferedReader(new FileReader("users.csv"));
+            String line;
+            reader.readLine(); // Skip header
+
+            while((line = reader.readLine()) != null){
+                String[] parts = line.split(",");
+                String username = parts[0];
+                String password = parts[1];
+                users.add(new User(username,password));
+            }
+            reader.close();
+        }catch(Exception e){
+            System.out.println("Could not load users.");
+        }
+    }
+
+    //Writes user data into the users.csv file
+    static void saveUsers(){
+        try{
+            PrintWriter writer = new PrintWriter(new FileWriter("users.csv"));
+            writer.println("username,password"); // This is a header, which I skip in loadUsers
+
+            for(User u : users){
+                writer.println(u.username + "," + u.password);
+            }
+            writer.close();
+        }catch(Exception e){
+            System.out.println("Could not save users.");
+        }
+    }
+
+    //Checks if a user already exists
+    static boolean userExists(String username){
+        for(User u : users){
+            if(u.username.equals(username)){
+                return true;
+            }
+        }
+        return false;
     }
 
     // -----------------------------
@@ -75,11 +129,16 @@ public class RecordShelfDemo {
 
         signupBtn.addActionListener(e -> {
 
-            String user = username.getText();
+            String user = username.getText().trim(); // Added a trim to get rid of any leading whitespace -- Danyal Fahim
             String pass = new String(password.getPassword());
 
-            users.add(new User(user,pass));
+            if(userExists(user)){
+                JOptionPane.showMessageDialog(frame,"Username already exists");
+                return;
+            }
 
+            users.add(new User(user,pass));
+            saveUsers(); // Saves the user to the file; overwrites users.csv file -- Danyal Fahim
             JOptionPane.showMessageDialog(frame,"User created!");
 
         });
