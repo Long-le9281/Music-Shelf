@@ -14,7 +14,7 @@ public class RecordShelfDemo {
 
     public static void main(String[] args) {
 
-        // Hard coded demo data
+        // Hard coded the demo data
         users.add(new User("demo","demo"));
 
         albums.add(new Album("Abbey Road","The Beatles"));
@@ -29,6 +29,7 @@ public class RecordShelfDemo {
         songs.add(new Song("Bohemian Rhapsody","Queen","A Night at the Opera"));
 
         SwingUtilities.invokeLater(() -> showLogin());
+
     }
 
     // -----------------------------
