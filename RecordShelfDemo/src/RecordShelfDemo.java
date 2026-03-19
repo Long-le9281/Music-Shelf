@@ -26,18 +26,19 @@ public class RecordShelfDemo {
     private static final String DB_FILE = "music_shelf.db";
 
     static String resolveDbPath() {
-        Path local = Paths.get(DB_FILE).toAbsolutePath().normalize();
-        if (Files.exists(local)) {
-            return local.toString();
-        }
-
+        // Canonical location is the repo root (one level up from RecordShelfDemo/)
         Path parent = Paths.get("..", DB_FILE).toAbsolutePath().normalize();
         if (Files.exists(parent)) {
             return parent.toString();
         }
 
-        // Default location for new DB creation if none exists yet.
-        return local.toString();
+        Path local = Paths.get(DB_FILE).toAbsolutePath().normalize();
+        if (Files.exists(local)) {
+            return local.toString();
+        }
+
+        // Default: create at repo root
+        return parent.toString();
     }
 
     public static void main(String[] args) {

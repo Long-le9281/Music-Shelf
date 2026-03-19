@@ -8,21 +8,16 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
 import java.sql.PreparedStatement;
-import se.michaelthelin.spotify.SpotifyApi;
-import se.michaelthelin.spotify.exceptions.detailed.ForbiddenException;
-import se.michaelthelin.spotify.model_objects.specification.Track;
-import se.michaelthelin.spotify.requests.data.search.simplified.SearchTracksRequest;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 public class DataSourcing {
-    //API keys
-    private static final String SPOTIFY_CLIENT_ID = "a7df04b3f2eb4138bdf8cdff694d751c";
-    private static final String SPOTIFY_CLIENT_SECRET = "f3d2b32f7c19462c99d0f1597f4cb0af";
     private static final String GENIUS_ACCESS_TOKEN = "nWxr8IdQBwdPzcK53obFQsa0Z94NzZld0dYoxsc2g60Rj-DPIxLgbOti7edVn2lP";
 
     public static void main(String[] args) {
-        List<Song> songs = fetchSongsFromSpotify("rock", 10);
+        List<Song> songs = fetchSongsFromItunes("rock", 10);
         if (songs.isEmpty()) {
-            System.out.println("No songs fetched from Spotify. Database was not modified.");
+            System.out.println("No songs fetched from iTunes. Database was not modified.");
             return;
         }
         for (Song song : songs) {
@@ -35,18 +30,19 @@ public class DataSourcing {
     private static final String DB_FILE = "music_shelf.db";
 
     static String resolveDbPath() {
-        Path local = Paths.get(DB_FILE).toAbsolutePath().normalize();
-        if (Files.exists(local)) {
-            return local.toString();
-        }
-
+        // Canonical location is the repo root (one level up from RecordShelfDemo/)
         Path parent = Paths.get("..", DB_FILE).toAbsolutePath().normalize();
         if (Files.exists(parent)) {
             return parent.toString();
         }
 
-        // Default location for new DB creation if none exists yet.
-        return local.toString();
+        Path local = Paths.get(DB_FILE).toAbsolutePath().normalize();
+        if (Files.exists(local)) {
+            return local.toString();
+        }
+
+        // Default: create at repo root
+        return parent.toString();
     }
 
     // Create songs table and insert songs
@@ -96,57 +92,44 @@ public class DataSourcing {
         String lyrics;
     }
 
-    // Stub: Fetch songs from Spotify
-    static List<Song> fetchSongsFromSpotify(String genre, int limit) {
+    // Fetch songs from iTunes Search API (free, no credentials needed)
+    static List<Song> fetchSongsFromItunes(String genre, int limit) {
         List<Song> songs = new ArrayList<>();
         try {
-            SpotifyApi spotifyApi = new SpotifyApi.Builder()
-                .setClientId(SPOTIFY_CLIENT_ID)
-                .setClientSecret(SPOTIFY_CLIENT_SECRET)
-                .build();
+            String query = URLEncoder.encode(genre, "UTF-8");
+            String urlStr = "https://itunes.apple.com/search?term=" + query + "&media=music&limit=" + limit;
+            URL url = new URL(urlStr);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("Accept", "application/json");
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(10000);
 
-            try {
-                // Get access token
-                final String accessToken = spotifyApi.clientCredentials().build().execute().getAccessToken();
-                spotifyApi.setAccessToken(accessToken);
-
-                Track[] tracks;
-                try {
-                    SearchTracksRequest searchTracksRequest = spotifyApi
-                        .searchTracks("genre:\"" + genre + "\"")
-                        .limit(limit)
-                        .build();
-                    tracks = searchTracksRequest.execute().getItems();
-                } catch (ForbiddenException ex) {
-                    // Fallback to plain text query in case genre-qualified search is blocked.
-                    SearchTracksRequest fallbackRequest = spotifyApi
-                        .searchTracks(genre)
-                        .limit(limit)
-                        .build();
-                    tracks = fallbackRequest.execute().getItems();
+            StringBuilder sb = new StringBuilder();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line);
                 }
+            }
 
-                System.out.println("Fetched " + tracks.length + " tracks from Spotify.");
+            JSONObject json = new JSONObject(sb.toString());
+            JSONArray results = json.getJSONArray("results");
+            System.out.println("Fetched " + results.length() + " tracks from iTunes.");
 
-                for (Track track : tracks) {
-                    Song song = new Song();
-                    song.title = track.getName();
-                    song.artist = track.getArtists()[0].getName();
-                    song.album = track.getAlbum().getName();
-                    song.genre = genre;
-                    if (track.getAlbum().getImages().length > 0) {
-                        song.albumArtUrl = track.getAlbum().getImages()[0].getUrl();
-                    }
-                    songs.add(song);
-                }
-            } catch (ForbiddenException e) {
-                System.out.println("Spotify API returned 403 Forbidden.");
-                System.out.println("Your client credentials are likely invalid/revoked, or this app is blocked from this endpoint.");
-                System.out.println("Check your Spotify Dashboard app credentials and regenerate the client secret if needed.");
-            } catch (Exception e) {
-                e.printStackTrace();
+            for (int i = 0; i < results.length(); i++) {
+                JSONObject track = results.getJSONObject(i);
+                Song song = new Song();
+                song.title = track.optString("trackName", "(unknown)");
+                song.artist = track.optString("artistName", "(unknown)");
+                song.album = track.optString("collectionName", "(unknown)");
+                song.genre = track.optString("primaryGenreName", genre);
+                // Replace thumbnail size 100x100 with 600x600 for better quality
+                song.albumArtUrl = track.optString("artworkUrl100", "").replace("100x100bb", "600x600bb");
+                songs.add(song);
             }
         } catch (Exception e) {
+            System.out.println("Error fetching from iTunes: " + e.getMessage());
             e.printStackTrace();
         }
         return songs;
@@ -213,32 +196,4 @@ public class DataSourcing {
         return songs;
     }
 
-    // Fetch album art from Spotify
-    public static String fetchAlbumArtFromSpotify(String title, String artist) {
-        try {
-            SpotifyApi spotifyApi = new SpotifyApi.Builder()
-                .setClientId(SPOTIFY_CLIENT_ID)
-                .setClientSecret(SPOTIFY_CLIENT_SECRET)
-                .build();
-
-            try {
-                // Get access token
-                final String accessToken = spotifyApi.clientCredentials().build().execute().getAccessToken();
-                spotifyApi.setAccessToken(accessToken);
-
-                String query = title + " " + artist;
-                SearchTracksRequest searchTracksRequest = spotifyApi.searchTracks(query).limit(1).build();
-                Track[] tracks = searchTracksRequest.execute().getItems();
-
-                if (tracks.length > 0 && tracks[0].getAlbum().getImages().length > 0) {
-                    return tracks[0].getAlbum().getImages()[0].getUrl();
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return "";
-    }
 }
