@@ -53,6 +53,8 @@ async function callApi(path, options = {}) {
 // Shortcuts for GET and POST requests
 function apiGet(path)        { return callApi(path); }
 function apiPost(path, body) { return callApi(path, { method: "POST", body: JSON.stringify(body) }); }
+function apiPut(path, body)  { return callApi(path, { method: "PUT", body: JSON.stringify(body) }); }
+function apiDelete(path)     { return callApi(path, { method: "DELETE" }); }
 
 // ============================================================
 // 2. AUTH CONTEXT
@@ -382,6 +384,42 @@ const css = `
         border-radius: 8px;
         background: #fff;
     }
+
+    /* --- Playlists Page --- */
+    .playlists-page { padding: 78px 3rem 3rem; max-width: 900px; margin: 0 auto; background: linear-gradient(135deg, #f5f1ed 0%, #e8ddd3 100%); }
+    .playlists-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; }
+    .playlists-title { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 2px; color: #2c2420; }
+    .playlist-card { background: rgba(255,255,255,0.7); border: 2px solid rgba(139,115,85,0.3); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; cursor: pointer; transition: all 0.2s; }
+    .playlist-card:hover { background: rgba(255,255,255,0.9); border-color: rgba(139,115,85,0.6); transform: translateY(-2px); }
+    .playlist-card-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; letter-spacing: 1px; color: #2c2420; margin-bottom: 0.4rem; }
+    .playlist-card-info { font-size: 0.8rem; color: rgba(44,36,32,0.6); margin-bottom: 0.8rem; }
+    .playlist-card-category { display: inline-block; font-size: 0.7rem; letter-spacing: 1px; text-transform: uppercase; padding: 0.3rem 0.7rem; border-radius: 999px; background: rgba(212,116,79,0.15); color: #d4744f; font-weight: 600; }
+    .playlist-card-actions { display: flex; gap: 0.6rem; }
+
+    /* --- Create/Edit Playlist Modal --- */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .modal-content { background: linear-gradient(135deg, #f5f1ed 0%, #e8ddd3 100%); border: 3px solid #8b7355; border-radius: 16px; padding: 2.5rem; max-width: 500px; width: 90%; box-shadow: 0 25px 80px rgba(0,0,0,0.4); }
+    .modal-header { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 1px; color: #2c2420; margin-bottom: 1.5rem; }
+    .modal-field { margin-bottom: 1.3rem; }
+    .modal-field label { display: block; font-size: 0.72rem; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(44,36,32,0.6); margin-bottom: 0.5rem; font-weight: 600; }
+    .modal-field input, .modal-field select, .modal-field textarea { width: 100%; padding: 0.9rem 1.1rem; border-radius: 10px; background: rgba(255,255,255,0.7); border: 2px solid rgba(139,115,85,0.3); color: #2c2420; font-size: 0.95rem; font-family: inherit; outline: none; transition: all 0.2s; }
+    .modal-field input:focus, .modal-field select:focus, .modal-field textarea:focus { border-color: #d4744f; background: rgba(255,255,255,0.95); }
+    .modal-field textarea { resize: none; min-height: 80px; }
+    .modal-actions { display: flex; gap: 0.8rem; margin-top: 2rem; }
+    .modal-actions button { flex: 1; padding: 1rem; border: none; border-radius: 10px; font-size: 0.85rem; letter-spacing: 2px; text-transform: uppercase; font-family: inherit; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+    .modal-save { background: linear-gradient(135deg, #d4744f 0%, #c26241 100%); color: #f5f1ed; box-shadow: 0 4px 15px rgba(212,116,79,0.3); }
+    .modal-save:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212,116,79,0.4); }
+    .modal-cancel { background: rgba(139,115,85,0.2); color: #2c2420; border: 2px solid rgba(139,115,85,0.4); }
+    .modal-cancel:hover { background: rgba(139,115,85,0.4); }
+
+    /* --- Playlist Detail Page --- */
+    .playlist-detail-page { padding: 78px 3rem 3rem; max-width: 900px; margin: 0 auto; background: linear-gradient(135deg, #f5f1ed 0%, #e8ddd3 100%); }
+    .playlist-back { font-size: 0.8rem; letter-spacing: 1px; text-transform: uppercase; color: #d4744f; margin-bottom: 2rem; cursor: pointer; }
+    .playlist-detail-header { margin-bottom: 2.5rem; }
+    .playlist-detail-title { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 2px; color: #2c2420; margin-bottom: 0.5rem; }
+    .playlist-detail-info { font-size: 0.85rem; color: rgba(44,36,32,0.6); }
+    .playlist-songs { margin-top: 2rem; }
+    .playlist-song-empty { text-align: center; color: rgba(44,36,32,0.4); padding: 2rem; }
 `;
 
 function GlobalStyles() {
@@ -407,6 +445,7 @@ function Navbar() {
                 <Link to="/search">Search</Link>
                 {user ? (
                     <>
+                        <Link to="/playlists">Playlists</Link>
                         <Link to={"/profile/" + user.username} className="nav-user">{user.username}</Link>
                         <button onClick={() => { logout(); navigate("/"); }}>Sign Out</button>
                     </>
@@ -432,8 +471,81 @@ function AlbumArt({ color1, color2, size, style = {} }) {
     );
 }
 
+// --- Add to Playlist Modal ---
+function AddToPlaylistModal({ isOpen, song, onClose, onAdd }) {
+    const [playlists, setPlaylists] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [selectedPlaylist, setSelectedPlaylist] = useState(null);
+    const { user } = useAuth();
+
+    useEffect(() => {
+        if (isOpen && user) {
+            setLoading(true);
+            apiGet("/playlists")
+                .then(data => {
+                    setPlaylists(data);
+                    if (data.length > 0) setSelectedPlaylist(data[0].id);
+                })
+                .catch(err => console.error(err))
+                .finally(() => setLoading(false));
+        }
+    }, [isOpen, user]);
+
+    async function handleAdd() {
+        if (!selectedPlaylist) return;
+        try {
+            await apiPost(`/playlists/${selectedPlaylist}/songs/${song.id}`, {});
+            onAdd();
+            onClose();
+        } catch (err) {
+            console.error(err);
+            alert(err.message || "Could not add song to playlist");
+        }
+    }
+
+    if (!isOpen || !song) return null;
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">Add to Playlist</div>
+                <div style={{ marginBottom: "1rem", fontSize: "0.9rem", color: "rgba(44,36,32,0.7)" }}>
+                    <strong>{song.title}</strong> · {song.albumTitle}
+                </div>
+                
+                {loading && <div style={{ textAlign: "center", padding: "1rem", color: "rgba(44,36,32,0.5)" }}>Loading playlists…</div>}
+
+                {!loading && playlists.length === 0 && (
+                    <div style={{ textAlign: "center", padding: "1rem", color: "rgba(44,36,32,0.5)" }}>
+                        No playlists yet. <br/>
+                        <Link to="/playlists" onClick={onClose} style={{ color: "#d4744f" }}>Create one</Link>
+                    </div>
+                )}
+
+                {!loading && playlists.length > 0 && (
+                    <div className="modal-field">
+                        <label>Select Playlist</label>
+                        <select value={selectedPlaylist || ""} onChange={e => setSelectedPlaylist(Number(e.target.value))}>
+                            {playlists.map(p => (
+                                <option key={p.id} value={p.id}>{p.name} ({p.songCount})</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
+
+                {!loading && playlists.length > 0 && (
+                    <div className="modal-actions">
+                        <button className="modal-save" onClick={handleAdd}>Add to Playlist</button>
+                        <button className="modal-cancel" onClick={onClose}>Cancel</button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 // --- Song Detail Modal ---
-function SongDetailModal({ song, album, onClose }) {
+function SongDetailModal({ song, album, onClose, user, onShowAddToPlaylist }) {
     if (!song) return null;
 
     return (
@@ -477,6 +589,18 @@ function SongDetailModal({ song, album, onClose }) {
                         )}
                     </div>
                 </div>
+
+                {user && (
+                    <div style={{ marginTop: "1.5rem" }}>
+                        <button
+                            className="submit-btn"
+                            onClick={() => onShowAddToPlaylist(song)}
+                            style={{ margin: 0, marginTop: 0 }}
+                        >
+                            + Add to Playlist
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -526,6 +650,8 @@ function ShelfPage() {
     const [selectedSong, setSelectedSong] = useState(null);
     const [mainFilter, setMainFilter] = useState("albums");
     const [infoSong, setInfoSong] = useState(null);
+    const [addToPlaylistOpen, setAddToPlaylistOpen] = useState(false);
+    const [selectedSongForPlaylist, setSelectedSongForPlaylist] = useState(null);
     const [loading, setLoading]     = useState(true);
     const { user } = useAuth();
     const pageRef  = useRef(null);
@@ -756,6 +882,27 @@ function ShelfPage() {
                     song={selectedSong}
                     album={detail || activeAlbum || { title: selectedSong.albumTitle || "Unknown Album", artist: selectedSong.artist || "Unknown Artist" }}
                     onClose={() => setSelectedSong(null)}
+                    user={user}
+                    onShowAddToPlaylist={(song) => {
+                        setSelectedSongForPlaylist(song);
+                        setAddToPlaylistOpen(true);
+                        setSelectedSong(null);
+                    }}
+                />
+            )}
+
+            {/* Add to Playlist Modal */}
+            {selectedSongForPlaylist && (
+                <AddToPlaylistModal
+                    isOpen={addToPlaylistOpen}
+                    song={selectedSongForPlaylist}
+                    onClose={() => {
+                        setAddToPlaylistOpen(false);
+                        setSelectedSongForPlaylist(null);
+                    }}
+                    onAdd={() => {
+                        // Optionally show a success message or refresh
+                    }}
                 />
             )}
 
@@ -996,6 +1143,277 @@ function ProfilePage() {
     );
 }
 
+// --- Create/Edit Playlist Modal ---
+function CreatePlaylistModal({ isOpen, playlist = null, onClose, onSave }) {
+    const [name, setName] = useState(playlist?.name || "");
+    const [description, setDescription] = useState(playlist?.description || "");
+    const [category, setCategory] = useState(playlist?.category || "Custom");
+    const [saving, setSaving] = useState(false);
+
+    async function handleSave() {
+        if (!name.trim()) return;
+        setSaving(true);
+        try {
+            await onSave({ name, description, category });
+            setName("");
+            setDescription("");
+            setCategory("Custom");
+            onClose();
+        } catch (err) {
+            console.error(err);
+            alert(err.message || "Could not save playlist");
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">{playlist ? "Edit Playlist" : "Create Playlist"}</div>
+                
+                <div className="modal-field">
+                    <label>Playlist Name</label>
+                    <input
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        placeholder="e.g., 90s Classics, Workout Mix"
+                        autoFocus
+                    />
+                </div>
+
+                <div className="modal-field">
+                    <label>Description (optional)</label>
+                    <textarea
+                        value={description}
+                        onChange={e => setDescription(e.target.value)}
+                        placeholder="Describe your playlist..."
+                    />
+                </div>
+
+                <div className="modal-field">
+                    <label>Category</label>
+                    <select value={category} onChange={e => setCategory(e.target.value)}>
+                        <option value="Custom">Custom</option>
+                        <option value="Decade - 1950s">Decade - 1950s</option>
+                        <option value="Decade - 1960s">Decade - 1960s</option>
+                        <option value="Decade - 1970s">Decade - 1970s</option>
+                        <option value="Decade - 1980s">Decade - 1980s</option>
+                        <option value="Decade - 1990s">Decade - 1990s</option>
+                        <option value="Decade - 2000s">Decade - 2000s</option>
+                        <option value="Decade - 2010s">Decade - 2010s</option>
+                        <option value="Genre - Rock">Genre - Rock</option>
+                        <option value="Genre - Pop">Genre - Pop</option>
+                        <option value="Genre - Hip-Hop">Genre - Hip-Hop</option>
+                        <option value="Genre - Jazz">Genre - Jazz</option>
+                        <option value="Genre - Electronic">Genre - Electronic</option>
+                        <option value="Mood - Relaxing">Mood - Relaxing</option>
+                        <option value="Mood - Energetic">Mood - Energetic</option>
+                        <option value="Activity - Workout">Activity - Workout</option>
+                        <option value="Activity - Study">Activity - Study</option>
+                        <option value="Artist Mix">Artist Mix</option>
+                    </select>
+                </div>
+
+                <div className="modal-actions">
+                    <button className="modal-save" disabled={saving} onClick={handleSave}>
+                        {saving ? "Saving..." : "Save Playlist"}
+                    </button>
+                    <button className="modal-cancel" onClick={onClose}>Cancel</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// --- Playlists Page ---
+function PlaylistsPage() {
+    const [playlists, setPlaylists] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [createModalOpen, setCreateModalOpen] = useState(false);
+    const [editingPlaylist, setEditingPlaylist] = useState(null);
+    const { user } = useAuth();
+    const navigate = useNavigate();
+
+    // Load playlists on mount
+    useEffect(() => {
+        if (!user) {
+            navigate("/login");
+            return;
+        }
+        
+        apiGet("/playlists")
+            .then(data => setPlaylists(data))
+            .catch(err => console.error(err))
+            .finally(() => setLoading(false));
+    }, [user, navigate]);
+
+    async function handleCreatePlaylist(data) {
+        const response = await apiPost("/playlists", data);
+        setPlaylists([response, ...playlists]);
+    }
+
+    async function handleEditPlaylist(data) {
+        await apiPut(`/playlists/${editingPlaylist.id}`, data);
+        const updated = await apiGet("/playlists");
+        setPlaylists(updated);
+        setEditingPlaylist(null);
+    }
+
+    async function handleDeletePlaylist(playlistId) {
+        if (!window.confirm("Delete this playlist?")) return;
+        await apiDelete(`/playlists/${playlistId}`);
+        setPlaylists(playlists.filter(p => p.id !== playlistId));
+    }
+
+    if (loading) return <div className="page loading">Loading playlists…</div>;
+
+    return (
+        <div className="page playlists-page">
+            <div className="playlists-header">
+                <div className="playlists-title">Your Playlists</div>
+                <button className="submit-btn" onClick={() => setCreateModalOpen(true)} style={{ margin: 0, width: "auto", marginTop: 0 }}>
+                    + Create Playlist
+                </button>
+            </div>
+
+            {playlists.length === 0 ? (
+                <div className="empty">No playlists yet. Create one to get started!</div>
+            ) : (
+                playlists.map(playlist => (
+                    <div key={playlist.id} className="playlist-card">
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                            <div style={{ flex: 1, cursor: "pointer" }} onClick={() => navigate(`/playlists/${playlist.id}`)}>
+                                <div className="playlist-card-title">{playlist.name}</div>
+                                {playlist.description && (
+                                    <div style={{ fontSize: "0.85rem", color: "rgba(44,36,32,0.6)", marginBottom: "0.6rem" }}>
+                                        {playlist.description}
+                                    </div>
+                                )}
+                                <div className="playlist-card-info">
+                                    <span className="playlist-card-category" style={{ marginRight: "0.8rem" }}>
+                                        {playlist.category}
+                                    </span>
+                                    <span style={{ fontSize: "0.75rem" }}>
+                                        {playlist.songCount} {playlist.songCount === 1 ? "song" : "songs"}
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="playlist-card-actions">
+                                <button className="ghost-btn" onClick={() => setEditingPlaylist(playlist)}>Edit</button>
+                                <button className="ghost-btn" onClick={() => handleDeletePlaylist(playlist.id)}>Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                ))
+            )}
+
+            <CreatePlaylistModal
+                isOpen={createModalOpen}
+                onClose={() => setCreateModalOpen(false)}
+                onSave={handleCreatePlaylist}
+            />
+
+            {editingPlaylist && (
+                <CreatePlaylistModal
+                    isOpen={true}
+                    playlist={editingPlaylist}
+                    onClose={() => setEditingPlaylist(null)}
+                    onSave={handleEditPlaylist}
+                />
+            )}
+        </div>
+    );
+}
+
+// --- Playlist Detail Page ---
+function PlaylistDetailPage() {
+    const { id } = useParams();
+    const [playlist, setPlaylist] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const { user } = useAuth();
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        if (!user) {
+            navigate("/login");
+            return;
+        }
+
+        apiGet(`/playlists/${id}`)
+            .then(data => setPlaylist(data))
+            .catch(err => console.error(err))
+            .finally(() => setLoading(false));
+    }, [id, user, navigate]);
+
+    async function handleRemoveSong(songId) {
+        if (!window.confirm("Remove this song from the playlist?")) return;
+        await apiDelete(`/playlists/${id}/songs/${songId}`);
+        setPlaylist({
+            ...playlist,
+            songs: playlist.songs.filter(s => s.id !== songId)
+        });
+    }
+
+    if (loading) return <div className="page loading">Loading playlist…</div>;
+    if (!playlist) return <div className="page empty">Playlist not found.</div>;
+
+    return (
+        <div className="page playlist-detail-page">
+            <div className="playlist-back" onClick={() => navigate("/playlists")}>
+                ← Back to Playlists
+            </div>
+
+            <div className="playlist-detail-header">
+                <div className="playlist-detail-title">{playlist.name}</div>
+                {playlist.description && (
+                    <p style={{ fontSize: "0.9rem", color: "rgba(44,36,32,0.6)", marginTop: "0.8rem" }}>
+                        {playlist.description}
+                    </p>
+                )}
+                <div className="playlist-detail-info" style={{ marginTop: "0.8rem" }}>
+                    <span className="playlist-card-category" style={{ marginRight: "0.8rem" }}>
+                        {playlist.category}
+                    </span>
+                    <span>{playlist.songs.length} {playlist.songs.length === 1 ? "song" : "songs"}</span>
+                </div>
+            </div>
+
+            <div className="playlist-songs">
+                {playlist.songs.length === 0 ? (
+                    <div className="playlist-song-empty">No songs in this playlist yet.</div>
+                ) : (
+                    <>
+                        <div className="section-title">Songs</div>
+                        {playlist.songs.map((song, idx) => (
+                            <div key={song.id} className="track">
+                                <span className="track-num">{idx + 1}</span>
+                                <div style={{ flex: 1 }}>
+                                    <div className="track-title">{song.title}</div>
+                                    <div style={{ fontSize: "0.75rem", color: "rgba(44,36,32,0.55)", marginTop: "2px" }}>
+                                        {song.albumTitle} · {song.artist}
+                                    </div>
+                                </div>
+                                <span className="track-dur">{formatTime(song.durationSeconds)}</span>
+                                <span className="track-actions">
+                                    <button
+                                        className="ghost-btn"
+                                        onClick={() => handleRemoveSong(song.id)}
+                                    >
+                                        Remove
+                                    </button>
+                                </span>
+                            </div>
+                        ))}
+                    </>
+                )}
+            </div>
+        </div>
+    );
+}
+
 // --- Signup Page ---
 function SignupPage() {
     const [username, setUsername] = useState("");
@@ -1113,6 +1531,8 @@ export default function App() {
                 <Routes>
                     <Route path="/"                   element={<ShelfPage />} />
                     <Route path="/search"             element={<SearchPage />} />
+                    <Route path="/playlists"          element={<PlaylistsPage />} />
+                    <Route path="/playlists/:id"      element={<PlaylistDetailPage />} />
                     <Route path="/profile/:username"  element={<ProfilePage />} />
                     <Route path="/signup"             element={<SignupPage />} />
                     <Route path="/login"              element={<LoginPage />} />
