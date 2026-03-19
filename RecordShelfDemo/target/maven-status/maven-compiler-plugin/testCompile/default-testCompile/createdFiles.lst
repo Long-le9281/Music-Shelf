@@ -1,3 +1,5 @@
 RecordShelfDemoTest.class
-DataSourcingTest$1.class
+DataSourcingTest$MockHttpURLConnection.class
 DataSourcingTest.class
+DataSourcingTest$1.class
+DataSourcingTest$2.class

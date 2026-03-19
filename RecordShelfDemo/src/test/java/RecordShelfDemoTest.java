@@ -1,5 +1,6 @@
 import org.junit.jupiter.api.Test;
 
+import java.awt.HeadlessException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -8,11 +9,25 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RecordShelfDemoTest {
+
+    private static void setHeadless(boolean value) {
+        System.setProperty("java.awt.headless", value ? "true" : "false");
+    }
+
+    private static void restoreHeadless(String previous) {
+        if (previous == null) {
+            System.clearProperty("java.awt.headless");
+        } else {
+            System.setProperty("java.awt.headless", previous);
+        }
+    }
 
     @Test
     void userExists_returnsTrueForKnownUserAndFalseOtherwise() {
@@ -93,6 +108,79 @@ class RecordShelfDemoTest {
                 cleanup.setString(3, uniqueAlbum);
                 cleanup.executeUpdate();
             }
+        }
+    }
+
+    @Test
+    void resolveDbPath_followsExpectedFallbackOrder() {
+        Path parent = Paths.get("..", "music_shelf.db").toAbsolutePath().normalize();
+        Path local = Paths.get("music_shelf.db").toAbsolutePath().normalize();
+
+        String resolved = RecordShelfDemo.resolveDbPath();
+
+        if (Files.exists(parent)) {
+            assertEquals(parent.toString(), resolved);
+        } else if (Files.exists(local)) {
+            assertEquals(local.toString(), resolved);
+        } else {
+            assertEquals(parent.toString(), resolved);
+        }
+    }
+
+    @Test
+    void userAndRatingConstructors_setFields() {
+        RecordShelfDemo.User user = new RecordShelfDemo.User("sam", "pw1");
+        RecordShelfDemo.Album album = new RecordShelfDemo.Album("Album", "Artist");
+        RecordShelfDemo.Rating rating = new RecordShelfDemo.Rating(album, 4);
+
+        assertEquals("sam", user.username);
+        assertEquals("pw1", user.password);
+        assertEquals(album, rating.item);
+        assertEquals(4, rating.rating);
+    }
+
+    @Test
+    void showLogin_throwsInHeadlessMode() {
+        String previous = System.getProperty("java.awt.headless");
+        try {
+            setHeadless(true);
+            assertThrows(HeadlessException.class, RecordShelfDemo::showLogin);
+        } finally {
+            restoreHeadless(previous);
+        }
+    }
+
+    @Test
+    void showMain_throwsInHeadlessMode() {
+        String previous = System.getProperty("java.awt.headless");
+        try {
+            setHeadless(true);
+            assertThrows(HeadlessException.class, RecordShelfDemo::showMain);
+        } finally {
+            restoreHeadless(previous);
+        }
+    }
+
+    @Test
+    void showProfile_throwsInHeadlessMode() {
+        String previous = System.getProperty("java.awt.headless");
+        try {
+            setHeadless(true);
+            RecordShelfDemo.currentUser = new RecordShelfDemo.User("headless", "pw");
+            assertThrows(HeadlessException.class, () -> RecordShelfDemo.showProfile(null));
+        } finally {
+            restoreHeadless(previous);
+        }
+    }
+
+    @Test
+    void main_doesNotThrow() {
+        String previous = System.getProperty("java.awt.headless");
+        try {
+            setHeadless(true);
+            assertDoesNotThrow(() -> RecordShelfDemo.main(new String[0]));
+        } finally {
+            restoreHeadless(previous);
         }
     }
 }
