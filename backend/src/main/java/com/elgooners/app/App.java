@@ -280,6 +280,93 @@ class Database {
         return results;
     }
 
+    // Search songs by title, album title, artist, or genre
+    List<Map<String, Object>> searchSongs(String query) {
+        String like = "%" + query.toLowerCase() + "%";
+        String sql = """
+            SELECT s.id, s.title, s.track_number, s.duration_seconds,
+                   a.id AS album_id, a.title AS album_title, a.artist, a.release_year, a.genre,
+                   a.color1, a.color2
+            FROM songs s
+            JOIN albums a ON a.id = s.album_id
+            WHERE LOWER(s.title) LIKE ?
+               OR LOWER(a.title) LIKE ?
+               OR LOWER(a.artist) LIKE ?
+               OR LOWER(a.genre) LIKE ?
+            ORDER BY a.title, s.track_number
+            """;
+        List<Map<String, Object>> results = new ArrayList<>();
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, like);
+            stmt.setString(2, like);
+            stmt.setString(3, like);
+            stmt.setString(4, like);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                Map<String, Object> song = new HashMap<>();
+                song.put("id", rs.getLong("id"));
+                song.put("title", rs.getString("title"));
+                song.put("trackNumber", rs.getInt("track_number"));
+                song.put("durationSeconds", rs.getInt("duration_seconds"));
+                song.put("albumId", rs.getLong("album_id"));
+                song.put("albumTitle", rs.getString("album_title"));
+                song.put("artist", rs.getString("artist"));
+                song.put("releaseYear", rs.getInt("release_year"));
+                song.put("genre", rs.getString("genre"));
+                song.put("color1", rs.getString("color1"));
+                song.put("color2", rs.getString("color2"));
+                results.add(song);
+            }
+        } catch (SQLException e) {
+            System.out.println("Error searching songs: " + e.getMessage());
+        }
+        return results;
+    }
+
+    long createAlbum(String title,
+                     String artist,
+                     int releaseYear,
+                     String genre,
+                     String description,
+                     String color1,
+                     String color2) {
+        String sql = "INSERT INTO albums (title, artist, release_year, genre, description, color1, color2) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            stmt.setString(1, title);
+            stmt.setString(2, artist);
+            stmt.setInt(3, releaseYear);
+            stmt.setString(4, genre);
+            stmt.setString(5, description);
+            stmt.setString(6, color1);
+            stmt.setString(7, color2);
+            stmt.executeUpdate();
+            ResultSet keys = stmt.getGeneratedKeys();
+            if (keys.next()) return keys.getLong(1);
+            throw new RuntimeException("Album insert succeeded but no ID returned");
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not create album: " + e.getMessage());
+        }
+    }
+
+    long createSong(long albumId, String title, int trackNumber, int durationSeconds) {
+        String sql = "INSERT INTO songs (album_id, title, track_number, duration_seconds) VALUES (?, ?, ?, ?)";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            stmt.setLong(1, albumId);
+            stmt.setString(2, title);
+            stmt.setInt(3, trackNumber);
+            stmt.setInt(4, durationSeconds);
+            stmt.executeUpdate();
+            ResultSet keys = stmt.getGeneratedKeys();
+            if (keys.next()) return keys.getLong(1);
+            throw new RuntimeException("Song insert succeeded but no ID returned");
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not create song: " + e.getMessage());
+        }
+    }
+
     // ------- RATING METHODS -------
 
     // Save or update a rating (if user already rated this album, update it)
@@ -461,6 +548,7 @@ class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/albums/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/search").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/search/add").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/profile/**").permitAll()
                 // Everything else requires the user to be logged in
                 .anyRequest().authenticated()
@@ -600,9 +688,81 @@ class AlbumController {
     @GetMapping("/search")
     public Map<String, Object> search(@RequestParam(defaultValue = "") String q) {
         if (q.isBlank()) {
-            return Map.of("albums", List.of());
+            return Map.of(
+                "albums", List.of(),
+                "songs", List.of(),
+                "meta", Map.of("albumCount", 0, "songCount", 0)
+            );
         }
-        return Map.of("albums", db.searchAlbums(q));
+        List<Map<String, Object>> albums = db.searchAlbums(q);
+        List<Map<String, Object>> songs = db.searchSongs(q);
+        return Map.of(
+            "albums", albums,
+            "songs", songs,
+            "meta", Map.of("albumCount", albums.size(), "songCount", songs.size())
+        );
+    }
+
+    @PostMapping("/search/add")
+    public ResponseEntity<?> addMissingSearchItem(@RequestBody Map<String, Object> body) {
+        String type = String.valueOf(body.getOrDefault("type", "album")).trim().toLowerCase();
+        String title = String.valueOf(body.getOrDefault("title", "")).trim();
+        String artist = String.valueOf(body.getOrDefault("artist", "Unknown Artist")).trim();
+
+        if (title.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "title is required"));
+        }
+
+        int releaseYear = 2026;
+        try {
+            Object raw = body.get("releaseYear");
+            if (raw != null && !raw.toString().isBlank()) {
+                releaseYear = Integer.parseInt(raw.toString());
+            }
+        } catch (Exception ignored) {}
+
+        String genre = String.valueOf(body.getOrDefault("genre", "Unknown")).trim();
+        String description = String.valueOf(body.getOrDefault("description", "Added from search when no result was found.")).trim();
+        String color1 = String.valueOf(body.getOrDefault("color1", "#5f5aa2")).trim();
+        String color2 = String.valueOf(body.getOrDefault("color2", "#a3bffa")).trim();
+
+        if (type.equals("song")) {
+            String albumTitle = String.valueOf(body.getOrDefault("albumTitle", "Singles")).trim();
+            long albumId = db.createAlbum(albumTitle, artist.isBlank() ? "Unknown Artist" : artist, releaseYear, genre, "Auto-created while adding a missing song.", color1, color2);
+            int trackNumber = 1;
+            int durationSeconds = 180;
+            try {
+                Object rawTrack = body.get("trackNumber");
+                if (rawTrack != null && !rawTrack.toString().isBlank()) trackNumber = Integer.parseInt(rawTrack.toString());
+            } catch (Exception ignored) {}
+            try {
+                Object rawDuration = body.get("durationSeconds");
+                if (rawDuration != null && !rawDuration.toString().isBlank()) durationSeconds = Integer.parseInt(rawDuration.toString());
+            } catch (Exception ignored) {}
+
+            long songId = db.createSong(albumId, title, trackNumber, durationSeconds);
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                "message", "Song added",
+                "type", "song",
+                "songId", songId,
+                "albumId", albumId
+            ));
+        }
+
+        long albumId = db.createAlbum(
+            title,
+            artist.isBlank() ? "Unknown Artist" : artist,
+            releaseYear,
+            genre,
+            description,
+            color1,
+            color2
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+            "message", "Album added",
+            "type", "album",
+            "albumId", albumId
+        ));
     }
 }
 
