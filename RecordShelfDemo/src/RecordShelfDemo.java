@@ -4,6 +4,13 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.ArrayList;
 
 public class RecordShelfDemo {
@@ -15,27 +22,59 @@ public class RecordShelfDemo {
     static ArrayList<Album> albums = new ArrayList<>();
     static ArrayList<Song> songs = new ArrayList<>();
     static User currentUser;
+    // SQLite database file
+    private static final String DB_FILE = "music_shelf.db";
+
+    static String resolveDbPath() {
+        Path local = Paths.get(DB_FILE).toAbsolutePath().normalize();
+        if (Files.exists(local)) {
+            return local.toString();
+        }
+
+        Path parent = Paths.get("..", DB_FILE).toAbsolutePath().normalize();
+        if (Files.exists(parent)) {
+            return parent.toString();
+        }
+
+        // Default location for new DB creation if none exists yet.
+        return local.toString();
+    }
 
     public static void main(String[] args) {
-
-        // Hard coded demo data
-        //users.add(new User("demo","demo"));
-
         // Loads already existing users
         loadUsers();
-
-        albums.add(new Album("Abbey Road","The Beatles"));
-        albums.add(new Album("Thriller","Michael Jackson"));
-        albums.add(new Album("Back in Black","AC/DC"));
-        albums.add(new Album("Random Access Memories","Daft Punk"));
-
-        songs.add(new Song("Come Together","The Beatles","Abbey Road"));
-        songs.add(new Song("Billie Jean","Michael Jackson","Thriller"));
-        songs.add(new Song("Back in Black","AC/DC","Back in Black"));
-        songs.add(new Song("Get Lucky","Daft Punk","Random Access Memories"));
-        songs.add(new Song("Bohemian Rhapsody","Queen","A Night at the Opera"));
-
+        // Load albums and songs from database
+        loadSongsFromDatabase();
         SwingUtilities.invokeLater(() -> showLogin());
+    }
+
+    // Load songs and albums from SQLite database
+    static void loadSongsFromDatabase() {
+        String url = "jdbc:sqlite:" + resolveDbPath();
+        try (Connection conn = DriverManager.getConnection(url)) {
+            String sql = "SELECT title, artist, album FROM songs";
+            try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+                while (rs.next()) {
+                    String title = rs.getString("title");
+                    String artist = rs.getString("artist");
+                    String album = rs.getString("album");
+                    songs.add(new Song(title, artist, album));
+                    // Optionally, add albums if not already present
+                    boolean albumExists = false;
+                    for (Album a : albums) {
+                        if (a.title.equals(album) && a.artist.equals(artist)) {
+                            albumExists = true;
+                            break;
+                        }
+                    }
+                    if (!albumExists) {
+                        albums.add(new Album(album, artist));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Could not load songs from database.");
+        }
     }
 
     // -----------------------------
