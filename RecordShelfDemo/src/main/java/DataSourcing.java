@@ -1,7 +1,8 @@
 import java.io.*;
 import java.net.*;
 import java.util.*;
-
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import se.michaelthelin.spotify.SpotifyApi;
 import se.michaelthelin.spotify.model_objects.specification.Track;
 import se.michaelthelin.spotify.requests.data.search.simplified.SearchTracksRequest;
@@ -13,28 +14,13 @@ public class DataSourcing {
     private static final String GENIUS_ACCESS_TOKEN = "nWxr8IdQBwdPzcK53obFQsa0Z94NzZld0dYoxsc2g60Rj-DPIxLgbOti7edVn2lP";
 
     public static void main(String[] args) {
-        SpotifyApi spotifyApi = new SpotifyApi.Builder()
-            .setClientId(SPOTIFY_CLIENT_ID)
-            .setClientSecret(SPOTIFY_CLIENT_SECRET)
-            .build();
+        List<Song> songs = fetchSongsFromSpotify("rock", 10);
 
-        try {
-            // Authenticate
-            spotifyApi.clientCredentials().build().execute();
-
-            // Search for tracks in a genre
-            SearchTracksRequest searchTracksRequest = spotifyApi.searchTracks("genre:rock").limit(10).build();
-            Track[] tracks = searchTracksRequest.execute().getItems();
-
-            for (Track track : tracks) {
-                System.out.println("Song: " + track.getName());
-                System.out.println("Artist: " + track.getArtists()[0].getName());
-                System.out.println("Album: " + track.getAlbum().getName());
-                System.out.println("Album Art: " + track.getAlbum().getImages()[0].getUrl());
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+        for (Song song : songs) {
+            song.lyrics = fetchLyricsFromGenius(song.title, song.artist);
         }
+
+        saveSongsToCSV(songs, "enriched_songs.csv");
     }
 
     // Example Song class
@@ -49,8 +35,41 @@ public class DataSourcing {
 
     // Stub: Fetch songs from Spotify
     static List<Song> fetchSongsFromSpotify(String genre, int limit) {
-        // TODO: Implement Spotify API call
-        return new ArrayList<>();
+        List<Song> songs = new ArrayList<>();
+        try {
+            SpotifyApi spotifyApi = new SpotifyApi.Builder()
+                .setClientId(SPOTIFY_CLIENT_ID)
+                .setClientSecret(SPOTIFY_CLIENT_SECRET)
+                .build();
+
+            try {
+                // Get access token
+                final String accessToken = spotifyApi.clientCredentials().build().execute().getAccessToken();
+                spotifyApi.setAccessToken(accessToken);
+
+                SearchTracksRequest searchTracksRequest = spotifyApi.searchTracks("genre:" + genre).limit(limit).build();
+                Track[] tracks = searchTracksRequest.execute().getItems();
+
+                System.out.println("Fetched " + tracks.length + " tracks from Spotify.");
+
+                for (Track track : tracks) {
+                    Song song = new Song();
+                    song.title = track.getName();
+                    song.artist = track.getArtists()[0].getName();
+                    song.album = track.getAlbum().getName();
+                    song.genre = genre;
+                    if (track.getAlbum().getImages().length > 0) {
+                        song.albumArtUrl = track.getAlbum().getImages()[0].getUrl();
+                    }
+                    songs.add(song);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return songs;
     }
 
     // Save songs to CSV
@@ -91,5 +110,55 @@ public class DataSourcing {
             e.printStackTrace();
             return "";
         }
+    }
+
+    // Load songs from CSV
+    static List<Song> loadSongsFromCSV(String filename) {
+        List<Song> songs = new ArrayList<>();
+        try {
+            List<String> lines = Files.readAllLines(Paths.get(filename));
+            for (String line : lines.subList(1, lines.size())) { // Skip header
+                String[] parts = line.split(",");
+                Song song = new Song();
+                song.title = parts[0].replace("\"", "");
+                song.artist = parts[1].replace("\"", "");
+                song.album = parts[2].replace("\"", "");
+                song.genre = parts[3].replace("\"", "");
+                // Add more fields as needed
+                songs.add(song);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return songs;
+    }
+
+    // Fetch album art from Spotify
+    public static String fetchAlbumArtFromSpotify(String title, String artist) {
+        try {
+            SpotifyApi spotifyApi = new SpotifyApi.Builder()
+                .setClientId(SPOTIFY_CLIENT_ID)
+                .setClientSecret(SPOTIFY_CLIENT_SECRET)
+                .build();
+
+            try {
+                // Get access token
+                final String accessToken = spotifyApi.clientCredentials().build().execute().getAccessToken();
+                spotifyApi.setAccessToken(accessToken);
+
+                String query = title + " " + artist;
+                SearchTracksRequest searchTracksRequest = spotifyApi.searchTracks(query).limit(1).build();
+                Track[] tracks = searchTracksRequest.execute().getItems();
+
+                if (tracks.length > 0 && tracks[0].getAlbum().getImages().length > 0) {
+                    return tracks[0].getAlbum().getImages()[0].getUrl();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "";
     }
 }
