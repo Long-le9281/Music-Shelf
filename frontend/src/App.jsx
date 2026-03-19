@@ -948,6 +948,8 @@ function SearchPage() {
     const [mode, setMode] = useState("both");
     const [loading, setLoading] = useState(false);
     const [adding, setAdding] = useState(false);
+    const [addToPlaylistOpen, setAddToPlaylistOpen] = useState(false);
+    const [selectedSongForPlaylist, setSelectedSongForPlaylist] = useState(null);
     const [addForm, setAddForm] = useState({
         type: "album",
         title: "",
@@ -956,6 +958,7 @@ function SearchPage() {
         releaseYear: "2026",
         genre: "Unknown",
     });
+    const { user } = useAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -1083,10 +1086,40 @@ function SearchPage() {
                                 <span className="track-num">{song.trackNumber || "-"}</span>
                                 <span className="track-title">{song.title} <span style={{ opacity: 0.6 }}>- {song.albumTitle} / {song.artist}</span></span>
                                 <span className="track-dur">{formatTime(song.durationSeconds)}</span>
+                                <span className="track-actions">
+                                    <button
+                                        className="ghost-btn"
+                                        onClick={() => {
+                                            if (!user) {
+                                                navigate("/login");
+                                                return;
+                                            }
+                                            setSelectedSongForPlaylist(song);
+                                            setAddToPlaylistOpen(true);
+                                        }}
+                                    >
+                                        Save
+                                    </button>
+                                </span>
                             </div>
                         ))}
                     </div>
                 </>
+            )}
+
+            {selectedSongForPlaylist && (
+                <AddToPlaylistModal
+                    isOpen={addToPlaylistOpen}
+                    song={selectedSongForPlaylist}
+                    onClose={() => {
+                        setAddToPlaylistOpen(false);
+                        setSelectedSongForPlaylist(null);
+                    }}
+                    onAdd={() => {
+                        setAddToPlaylistOpen(false);
+                        setSelectedSongForPlaylist(null);
+                    }}
+                />
             )}
         </div>
     );
