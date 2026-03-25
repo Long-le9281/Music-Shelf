@@ -1,0 +1,8 @@
+{
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.import.maven.enabled": true,
+    "java.project.referencedLibraries": [
+        "C:/Users/Admin/.m2/repository/**/*.jar",
+        "RecordShelfDemo/lib/**/*.jar"
+    ]
+}

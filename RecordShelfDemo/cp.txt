@@ -1,0 +1,1 @@
+C:\Users\Admin\.m2\repository\org\json\json\20210307\json-20210307.jar;C:\Users\Admin\.m2\repository\org\jsoup\jsoup\1.15.3\jsoup-1.15.3.jar

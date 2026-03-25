@@ -1,5 +1,3 @@
-package src;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -516,14 +514,18 @@ public class RecordShelfDemo {
         if (album == null) {
             return;
         }
+        if (albumLookup.containsKey(album.getItemKey())) {
+            return;
+        }
         addAlbumToCatalog(album);
+        // Persist to CSV
         try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(ALBUMS_SOURCE_FILE, true), StandardCharsets.UTF_8))) {
             if (ALBUMS_SOURCE_FILE.length() == 0) {
                 writer.println("artist,album_title,year,track_count,art_url");
             }
             writer.println(csvRow(album.artist, album.title, String.valueOf(album.year), String.valueOf(album.trackCount), album.artUrl));
         } catch (Exception e) {
-            System.out.println("Could not save album.");
+            System.out.println("Could not save album to CSV.");
         }
     }
 
@@ -531,14 +533,18 @@ public class RecordShelfDemo {
         if (song == null) {
             return;
         }
+        if (songLookup.containsKey(song.getItemKey())) {
+            return;
+        }
         addSongToCatalog(song);
+        // Persist to CSV
         try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(SONGS_SOURCE_FILE, true), StandardCharsets.UTF_8))) {
             if (SONGS_SOURCE_FILE.length() == 0) {
                 writer.println("artist,album_title,year,track_number,song_title,duration_seconds");
             }
             writer.println(csvRow(song.artist, song.albumTitle, String.valueOf(song.year), String.valueOf(song.trackNumber), song.title, String.valueOf(song.durationSeconds)));
         } catch (Exception e) {
-            System.out.println("Could not save song.");
+            System.out.println("Could not save song to CSV.");
         }
     }
 
