@@ -19,7 +19,7 @@
  */
 
 import React, { useState, useEffect, useContext, createContext, useRef } from "react";
-import { BrowserRouter, Routes, Route, Link, useNavigate, useParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, useNavigate, useParams, useLocation } from "react-router-dom";
 
 // Load Google Fonts
 const link = document.createElement("link");
@@ -234,9 +234,11 @@ const css = `
     .stack-card-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: 1px; line-height: 1.1; color: #f5f1ed; }
     .stack-card-artist { font-size: 0.65rem; letter-spacing: 1px; text-transform: uppercase; opacity: 0.7; color: #d4a574; margin-top: 4px; }
 
-    .detail-panel { flex: 1; overflow-y: auto; padding: 2.5rem 3rem; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .detail-panel { flex: 1; overflow: hidden; padding: 2.5rem 3rem; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .detail-shell { width: 100%; max-width: 900px; height: 100%; display: flex; flex-direction: column; min-height: 0; }
 
     .detail-top { display: flex; gap: 3rem; align-items: flex-start; margin-bottom: 2.5rem; max-width: 900px; width: 100%; }
+    .detail-scroll-region { flex: 1; min-height: 0; overflow-y: auto; padding-right: 0.4rem; }
 
     .album-cover {
         width: 260px; height: 260px; border-radius: 12px; flex-shrink: 0;
@@ -845,8 +847,13 @@ function ShelfPage() {
     const [playlistItem, setPlaylistItem] = useState(null);
     const [loading, setLoading]     = useState(true);
     const { user } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
     const pageRef  = useRef(null);
     const scrollBuf = useRef(0); // accumulates scroll distance
+    const focusAppliedRef = useRef(false);
+
+    const routeFocus = location.state && location.state.focus ? location.state.focus : null;
 
     // Load all albums and all songs when the page opens
     useEffect(() => {
@@ -861,6 +868,36 @@ function ShelfPage() {
             .catch(err => console.error(err))
             .finally(() => setLoading(false));
     }, []);
+
+    useEffect(() => {
+        if (!routeFocus || focusAppliedRef.current) return;
+
+        if (routeFocus.type === "song") {
+            const songIndex = allSongsGlobal.findIndex(song => song.id === routeFocus.songId);
+            if (songIndex >= 0) {
+                setMainFilter("songs");
+                setSongActiveIndex(songIndex);
+                focusAppliedRef.current = true;
+                navigate("/", { replace: true, state: null });
+                return;
+            }
+
+            if (!routeFocus.albumId) return;
+        }
+
+        const albumIndex = albums.findIndex(album => album.id === routeFocus.albumId);
+        if (albumIndex >= 0) {
+            setMainFilter("albums");
+            setActiveIndex(albumIndex);
+            focusAppliedRef.current = true;
+            navigate("/", { replace: true, state: null });
+            return;
+        }
+
+        if (loading) return;
+        focusAppliedRef.current = true;
+        navigate("/", { replace: true, state: null });
+    }, [routeFocus, albums, allSongsGlobal, loading, navigate]);
 
     const activeAlbum = albums[activeIndex] || null;
     const activeSong = allSongsGlobal[songActiveIndex] || null;
@@ -920,6 +957,10 @@ function ShelfPage() {
         const songsLen = allSongsGlobal.length;
 
         function onWheel(e) {
+            const wheelTarget = e.target;
+            if (wheelTarget instanceof Element && wheelTarget.closest(".track-scroll-region")) {
+                return;
+            }
             e.preventDefault();
             scrollBuf.current += e.deltaY;
             if (scrollBuf.current > 80) {
@@ -1129,7 +1170,7 @@ function ShelfPage() {
                 {(!focusedAlbumId && !songsMode) || (!focusedAlbumDetail && !songsMode) ? (
                     <div className="loading">LOADING…</div>
                 ) : (
-                    <>
+                    <div className="detail-shell">
                         <div className="detail-top">
                             {/* Album cover */}
                             <div className="album-cover">
@@ -1196,7 +1237,7 @@ function ShelfPage() {
 
                         {/* Track list */}
                         {focusedAlbumDetail?.songs && focusedAlbumDetail.songs.length > 0 && (
-                            <>
+                            <div className="detail-scroll-region track-scroll-region">
                                 <div className="section-title">{songsMode ? "Album Track List" : "Track List"}</div>
                                 <div className="track-lyrics-layout">
                                     <div>
@@ -1243,9 +1284,9 @@ function ShelfPage() {
                                         </div>
                                     </aside>
                                 </div>
-                            </>
+                            </div>
                         )}
-                    </>
+                    </div>
                 )}
             </div>
 
@@ -1281,7 +1322,6 @@ function SearchPage() {
     const [mode, setMode] = useState("albums");
     const [loading, setLoading] = useState(false);
     const [adding, setAdding] = useState(false);
-    const [selectedSong, setSelectedSong] = useState(null);
     const [addToPlaylistOpen, setAddToPlaylistOpen] = useState(false);
     const [playlistItem, setPlaylistItem] = useState(null);
     const [addForm, setAddForm] = useState({
@@ -1313,6 +1353,29 @@ function SearchPage() {
             subtitle: album.artist || "",
         });
         setAddToPlaylistOpen(true);
+    }
+
+    function openAlbumInShelf(album) {
+        navigate("/", {
+            state: {
+                focus: {
+                    type: "album",
+                    albumId: album.id,
+                },
+            },
+        });
+    }
+
+    function openSongInShelf(song) {
+        navigate("/", {
+            state: {
+                focus: {
+                    type: "song",
+                    songId: song.id,
+                    albumId: song.albumId || null,
+                },
+            },
+        });
     }
 
     useEffect(() => {
@@ -1415,7 +1478,7 @@ function SearchPage() {
                     <div className="section-title" style={{ marginTop: "0.6rem" }}>Albums</div>
                     <div className="album-grid">
                         {albums.map(album => (
-                            <div key={album.id} className="album-card" onClick={() => navigate("/")}>
+                            <div key={album.id} className="album-card" onClick={() => openAlbumInShelf(album)}>
                                 <AlbumArt color1={album.color1} color2={album.color2} artUrl={album.albumArtUrl} size="100%" style={{ height: 155 }} />
                                 <div className="album-card-info">
                                     <div className="album-card-title">{album.title}</div>
@@ -1448,7 +1511,7 @@ function SearchPage() {
                     <div className="section-title" style={{ marginTop: "1.6rem" }}>Songs</div>
                     <div className="album-grid">
                         {songs.map(song => (
-                            <div key={song.id} className="album-card" onClick={() => setSelectedSong(song)}>
+                            <div key={song.id} className="album-card" onClick={() => openSongInShelf(song)}>
                                 <div style={{ position: "relative" }}>
                                     <AlbumArt
                                         color1={song.color1}
@@ -1481,15 +1544,6 @@ function SearchPage() {
                         ))}
                     </div>
                 </>
-            )}
-            {selectedSong && (
-                <SongDetailModal
-                    song={selectedSong}
-                    album={{ title: selectedSong.albumTitle, artist: selectedSong.artist }}
-                    user={user}
-                    onShowAddToPlaylist={openSongPlaylistModal}
-                    onClose={() => setSelectedSong(null)}
-                />
             )}
             <AddToPlaylistModal
                 isOpen={addToPlaylistOpen}
