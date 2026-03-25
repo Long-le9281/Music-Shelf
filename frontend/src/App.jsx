@@ -359,6 +359,34 @@ const css = `
     .song-modal-section-title { font-family: 'Bebas Neue', sans-serif; font-size: 0.95rem; letter-spacing: 2px; text-transform: uppercase; color: rgba(44,36,32,0.5); margin-bottom: 0.75rem; }
     .song-modal-section-content { font-size: 0.9rem; line-height: 1.7; color: #2c2420; }
 
+    /* --- Playlists Page --- */
+    .playlists-page { padding: 78px 3rem 3rem; max-width: 920px; margin: 0 auto; background: linear-gradient(135deg, #f5f1ed 0%, #e8ddd3 100%); }
+    .playlists-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; gap: 1rem; }
+    .playlists-title { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 2px; color: #2c2420; }
+    .playlist-card { background: rgba(255,255,255,0.72); border: 2px solid rgba(139,115,85,0.3); border-radius: 12px; padding: 1.1rem; margin-bottom: 0.9rem; transition: all 0.2s; }
+    .playlist-card:hover { background: rgba(255,255,255,0.9); border-color: rgba(139,115,85,0.6); transform: translateY(-1px); }
+    .playlist-card-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; letter-spacing: 1px; color: #2c2420; margin-bottom: 0.3rem; }
+    .playlist-card-info { font-size: 0.8rem; color: rgba(44,36,32,0.6); margin-bottom: 0.7rem; }
+    .playlist-card-category { display: inline-block; font-size: 0.68rem; letter-spacing: 1px; text-transform: uppercase; padding: 0.28rem 0.65rem; border-radius: 999px; background: rgba(212,116,79,0.15); color: #d4744f; font-weight: 600; }
+    .playlist-card-actions { display: flex; gap: 0.5rem; }
+    .playlist-detail-page { padding: 78px 3rem 3rem; max-width: 920px; margin: 0 auto; background: linear-gradient(135deg, #f5f1ed 0%, #e8ddd3 100%); }
+    .playlist-back { font-size: 0.78rem; letter-spacing: 1px; text-transform: uppercase; color: #d4744f; margin-bottom: 1.5rem; cursor: pointer; }
+    .playlist-detail-title { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 2px; color: #2c2420; }
+    .playlist-detail-info { font-size: 0.84rem; color: rgba(44,36,32,0.6); }
+
+    /* --- Generic Form Modal --- */
+    .modal-content { background: linear-gradient(135deg, #f5f1ed 0%, #e8ddd3 100%); border: 3px solid #8b7355; border-radius: 16px; padding: 2rem; max-width: 520px; width: 90%; box-shadow: 0 25px 80px rgba(0,0,0,0.4); }
+    .modal-header { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 1px; color: #2c2420; margin-bottom: 1.2rem; }
+    .modal-field { margin-bottom: 1rem; }
+    .modal-field label { display: block; font-size: 0.72rem; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(44,36,32,0.6); margin-bottom: 0.45rem; font-weight: 600; }
+    .modal-field input, .modal-field select, .modal-field textarea { width: 100%; padding: 0.75rem 0.9rem; border-radius: 10px; background: rgba(255,255,255,0.7); border: 2px solid rgba(139,115,85,0.3); color: #2c2420; font-size: 0.92rem; font-family: inherit; outline: none; }
+    .modal-field textarea { min-height: 80px; resize: vertical; }
+    .modal-field input:focus, .modal-field select:focus, .modal-field textarea:focus { border-color: #d4744f; background: rgba(255,255,255,0.95); }
+    .modal-actions { display: flex; gap: 0.6rem; margin-top: 1.2rem; }
+    .modal-actions button { flex: 1; padding: 0.8rem; border: none; border-radius: 10px; font-size: 0.8rem; letter-spacing: 1px; text-transform: uppercase; font-family: inherit; font-weight: 600; cursor: pointer; }
+    .modal-save { background: linear-gradient(135deg, #d4744f 0%, #c26241 100%); color: #f5f1ed; }
+    .modal-cancel { background: rgba(139,115,85,0.2); color: #2c2420; }
+
     /* --- Search Page --- */
     .search-page { padding: 78px 3rem 3rem; background: linear-gradient(135deg, #f5f1ed 0%, #e8ddd3 100%); }
     .search-controls { display: flex; align-items: center; justify-content: center; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1rem; }
@@ -502,11 +530,11 @@ function Navbar() {
             <div className="navbar-links">
                 <Link to="/">Shelf</Link>
                 <Link to="/search">Search</Link>
+                {user && <Link to="/playlists">Playlists</Link>}
                 {user ? (
                     <>
                         <Link to="/account">Account</Link>
-                        {user.isAdmin && <Link to="/account" className="nav-user">Admin</Link>}
-                        <Link to={"/profile/" + user.username} className="nav-user">{user.username}</Link>
+                        <Link to={"/profile/" + user.username} className="nav-user">{user.displayName || user.username}</Link>
                         <button onClick={() => { logout(); navigate("/"); }}>Sign Out</button>
                     </>
                 ) : (
@@ -539,7 +567,7 @@ function hasArtwork(artUrl) {
 }
 
 // --- Song Detail Modal ---
-function SongDetailModal({ song, album, onClose }) {
+function SongDetailModal({ song, album, onClose, user, onShowAddToPlaylist }) {
     if (!song) return null;
 
     return (
@@ -589,6 +617,162 @@ function SongDetailModal({ song, album, onClose }) {
                             </div>
                         )}
                     </div>
+                </div>
+
+                {user && onShowAddToPlaylist && (
+                    <button
+                        className="ghost-btn"
+                        onClick={() => onShowAddToPlaylist(song)}
+                        style={{ marginTop: "0.4rem" }}
+                    >
+                        + Add Song to Playlist
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function AddToPlaylistModal({ isOpen, item, onClose, onAdded }) {
+    const [playlists, setPlaylists] = useState([]);
+    const [selectedPlaylist, setSelectedPlaylist] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const { user } = useAuth();
+
+    useEffect(() => {
+        if (!isOpen || !user) return;
+        setLoading(true);
+        apiGet("/playlists")
+            .then(data => {
+                setPlaylists(data || []);
+                if ((data || []).length > 0) setSelectedPlaylist(String(data[0].id));
+            })
+            .catch(err => console.error(err))
+            .finally(() => setLoading(false));
+    }, [isOpen, user]);
+
+    async function handleSave() {
+        if (!selectedPlaylist || !item) return;
+        setSaving(true);
+        try {
+            if (item.type === "album") {
+                await apiPost(`/playlists/${selectedPlaylist}/albums/${item.id}`, {});
+            } else {
+                await apiPost(`/playlists/${selectedPlaylist}/songs/${item.id}`, {});
+            }
+            if (onAdded) onAdded();
+            onClose();
+        } catch (err) {
+            alert(err.message || "Could not save to playlist.");
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    if (!isOpen || !item) return null;
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">Add to Playlist</div>
+                <div style={{ marginBottom: "0.8rem", color: "rgba(44,36,32,0.7)", fontSize: "0.9rem" }}>
+                    <strong>{item.title}</strong>
+                    {item.subtitle ? ` - ${item.subtitle}` : ""}
+                </div>
+
+                {loading && <div className="loading" style={{ padding: "1rem" }}>Loading playlists...</div>}
+
+                {!loading && playlists.length === 0 && (
+                    <div className="empty" style={{ padding: "1rem" }}>
+                        No playlists yet. Create one in the Playlists page.
+                    </div>
+                )}
+
+                {!loading && playlists.length > 0 && (
+                    <>
+                        <div className="modal-field">
+                            <label>Select Playlist</label>
+                            <select value={selectedPlaylist} onChange={e => setSelectedPlaylist(e.target.value)}>
+                                {playlists.map(p => (
+                                    <option key={p.id} value={String(p.id)}>
+                                        {p.name} ({p.songCount})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="modal-actions">
+                            <button className="modal-save" disabled={saving} onClick={handleSave}>
+                                {saving ? "Saving..." : "Add"}
+                            </button>
+                            <button className="modal-cancel" onClick={onClose}>Cancel</button>
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function CreatePlaylistModal({ isOpen, playlist = null, onClose, onSave }) {
+    const [name, setName] = useState(playlist?.name || "");
+    const [description, setDescription] = useState(playlist?.description || "");
+    const [category, setCategory] = useState(playlist?.category || "Custom");
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        setName(playlist?.name || "");
+        setDescription(playlist?.description || "");
+        setCategory(playlist?.category || "Custom");
+    }, [playlist, isOpen]);
+
+    async function handleSave() {
+        if (!name.trim()) return;
+        setSaving(true);
+        try {
+            await onSave({ name: name.trim(), description: description.trim(), category: category.trim() || "Custom" });
+            onClose();
+        } catch (err) {
+            alert(err.message || "Could not save playlist.");
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">{playlist ? "Edit Playlist" : "Create Playlist"}</div>
+                <div className="modal-field">
+                    <label>Playlist Name</label>
+                    <input value={name} onChange={e => setName(e.target.value)} autoFocus placeholder="e.g. 90s Mix" />
+                </div>
+                <div className="modal-field">
+                    <label>Description (optional)</label>
+                    <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Describe this playlist..." />
+                </div>
+                <div className="modal-field">
+                    <label>Category</label>
+                    <select value={category} onChange={e => setCategory(e.target.value)}>
+                        <option value="Custom">Custom</option>
+                        <option value="Decade - 1970s">Decade - 1970s</option>
+                        <option value="Decade - 1980s">Decade - 1980s</option>
+                        <option value="Decade - 1990s">Decade - 1990s</option>
+                        <option value="Decade - 2000s">Decade - 2000s</option>
+                        <option value="Genre - Rock">Genre - Rock</option>
+                        <option value="Genre - Pop">Genre - Pop</option>
+                        <option value="Genre - Jazz">Genre - Jazz</option>
+                        <option value="Mood - Relaxing">Mood - Relaxing</option>
+                        <option value="Mood - Energetic">Mood - Energetic</option>
+                        <option value="Activity - Workout">Activity - Workout</option>
+                        <option value="Activity - Study">Activity - Study</option>
+                    </select>
+                </div>
+                <div className="modal-actions">
+                    <button className="modal-save" disabled={saving} onClick={handleSave}>{saving ? "Saving..." : "Save"}</button>
+                    <button className="modal-cancel" onClick={onClose}>Cancel</button>
                 </div>
             </div>
         </div>
@@ -641,6 +825,8 @@ function ShelfPage() {
     const [mainFilter, setMainFilter] = useState("albums");
     const [songActiveIndex, setSongActiveIndex] = useState(0);
     const [allSongsGlobal, setAllSongsGlobal] = useState([]);
+    const [addToPlaylistOpen, setAddToPlaylistOpen] = useState(false);
+    const [playlistItem, setPlaylistItem] = useState(null);
     const [loading, setLoading]     = useState(true);
     const { user } = useAuth();
     const pageRef  = useRef(null);
@@ -768,6 +954,29 @@ function ShelfPage() {
         }
 
         if (openModal) setSelectedSong(song);
+    }
+
+    function openSongPlaylistModal(song) {
+        if (!song) return;
+        setPlaylistItem({
+            type: "song",
+            id: song.id,
+            title: song.title,
+            subtitle: song.albumTitle || focusedAlbumDetail?.title || activeAlbum?.title || "",
+        });
+        setAddToPlaylistOpen(true);
+    }
+
+    function openAlbumPlaylistModal() {
+        const albumForPlaylist = focusedAlbumDetail || activeAlbum;
+        if (!albumForPlaylist) return;
+        setPlaylistItem({
+            type: "album",
+            id: albumForPlaylist.id,
+            title: albumForPlaylist.title,
+            subtitle: albumForPlaylist.artist,
+        });
+        setAddToPlaylistOpen(true);
     }
 
     if (loading) return <div className="page loading">LOADING RECORDS…</div>;
@@ -955,6 +1164,11 @@ function ShelfPage() {
                                         </div>
                                         <StarRating value={myRating} onChange={handleRate} />
                                         {savedMsg && <div className="saved-msg">✓ Saved!</div>}
+                                        <div style={{ marginTop: "0.7rem" }}>
+                                            <button className="ghost-btn" onClick={openAlbumPlaylistModal}>
+                                                + Add Album Songs to Playlist
+                                            </button>
+                                        </div>
                                     </>
                                 ) : (
                                     <div className="sign-in-prompt">
@@ -991,6 +1205,17 @@ function ShelfPage() {
                                                     >
                                                         Lyrics
                                                     </button>
+                                                    {user && (
+                                                        <button
+                                                            className="ghost-btn"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                openSongPlaylistModal(song);
+                                                            }}
+                                                        >
+                                                            Add
+                                                        </button>
+                                                    )}
                                                 </span>
                                             </div>
                                         ))}
@@ -1013,9 +1238,20 @@ function ShelfPage() {
                 <SongDetailModal
                     song={selectedSong}
                     album={modalAlbum || { title: selectedSong.albumTitle || "Unknown Album", artist: selectedSong.artist || "Unknown Artist" }}
+                    user={user}
+                    onShowAddToPlaylist={openSongPlaylistModal}
                     onClose={() => setSelectedSong(null)}
                 />
             )}
+
+            <AddToPlaylistModal
+                isOpen={addToPlaylistOpen}
+                item={playlistItem}
+                onClose={() => {
+                    setAddToPlaylistOpen(false);
+                    setPlaylistItem(null);
+                }}
+            />
 
         </div>
     );
@@ -1030,6 +1266,8 @@ function SearchPage() {
     const [loading, setLoading] = useState(false);
     const [adding, setAdding] = useState(false);
     const [selectedSong, setSelectedSong] = useState(null);
+    const [addToPlaylistOpen, setAddToPlaylistOpen] = useState(false);
+    const [playlistItem, setPlaylistItem] = useState(null);
     const [addForm, setAddForm] = useState({
         type: "album",
         title: "",
@@ -1039,6 +1277,27 @@ function SearchPage() {
         genre: "Unknown",
     });
     const navigate = useNavigate();
+    const { user } = useAuth();
+
+    function openSongPlaylistModal(song) {
+        setPlaylistItem({
+            type: "song",
+            id: song.id,
+            title: song.title,
+            subtitle: song.albumTitle || song.artist || "",
+        });
+        setAddToPlaylistOpen(true);
+    }
+
+    function openAlbumPlaylistModal(album) {
+        setPlaylistItem({
+            type: "album",
+            id: album.id,
+            title: album.title,
+            subtitle: album.artist || "",
+        });
+        setAddToPlaylistOpen(true);
+    }
 
     useEffect(() => {
         setAddForm(prev => ({
@@ -1148,6 +1407,19 @@ function SearchPage() {
                                     {album.avgRating && (
                                         <div className="album-card-rating">★ {Number(album.avgRating).toFixed(1)}</div>
                                     )}
+                                    {user && (
+                                        <div style={{ marginTop: "0.45rem" }}>
+                                            <button
+                                                className="ghost-btn"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    openAlbumPlaylistModal(album);
+                                                }}
+                                            >
+                                                Add Album to Playlist
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -1175,6 +1447,19 @@ function SearchPage() {
                                     <div className="album-card-title">{song.title}</div>
                                     <div className="album-card-artist">{song.artist} · {song.albumTitle}</div>
                                     <div className="album-card-rating">{formatTime(song.durationSeconds)}</div>
+                                    {user && (
+                                        <div style={{ marginTop: "0.45rem" }}>
+                                            <button
+                                                className="ghost-btn"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    openSongPlaylistModal(song);
+                                                }}
+                                            >
+                                                Add Song to Playlist
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -1185,9 +1470,175 @@ function SearchPage() {
                 <SongDetailModal
                     song={selectedSong}
                     album={{ title: selectedSong.albumTitle, artist: selectedSong.artist }}
+                    user={user}
+                    onShowAddToPlaylist={openSongPlaylistModal}
                     onClose={() => setSelectedSong(null)}
                 />
             )}
+            <AddToPlaylistModal
+                isOpen={addToPlaylistOpen}
+                item={playlistItem}
+                onClose={() => {
+                    setAddToPlaylistOpen(false);
+                    setPlaylistItem(null);
+                }}
+            />
+        </div>
+    );
+}
+
+function PlaylistsPage() {
+    const [playlists, setPlaylists] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [createOpen, setCreateOpen] = useState(false);
+    const [editingPlaylist, setEditingPlaylist] = useState(null);
+    const { user } = useAuth();
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        if (!user) {
+            navigate("/login");
+            return;
+        }
+        apiGet("/playlists")
+            .then(data => setPlaylists(data || []))
+            .catch(err => console.error(err))
+            .finally(() => setLoading(false));
+    }, [user, navigate]);
+
+    async function refreshPlaylists() {
+        const data = await apiGet("/playlists");
+        setPlaylists(data || []);
+    }
+
+    async function createPlaylist(data) {
+        await apiPost("/playlists", data);
+        await refreshPlaylists();
+    }
+
+    async function updatePlaylist(data) {
+        if (!editingPlaylist) return;
+        await apiPut(`/playlists/${editingPlaylist.id}`, data);
+        setEditingPlaylist(null);
+        await refreshPlaylists();
+    }
+
+    async function removePlaylist(id) {
+        if (!window.confirm("Delete this playlist?")) return;
+        await apiDelete(`/playlists/${id}`);
+        setPlaylists(prev => prev.filter(p => p.id !== id));
+    }
+
+    if (loading) return <div className="page loading">Loading playlists...</div>;
+
+    return (
+        <div className="page playlists-page">
+            <div className="playlists-header">
+                <div className="playlists-title">Your Playlists</div>
+                <button className="submit-btn" style={{ margin: 0, width: "auto" }} onClick={() => setCreateOpen(true)}>
+                    + Create Playlist
+                </button>
+            </div>
+
+            {playlists.length === 0 ? (
+                <div className="empty">No playlists yet. Create one to get started.</div>
+            ) : (
+                playlists.map(playlist => (
+                    <div key={playlist.id} className="playlist-card">
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem" }}>
+                            <div style={{ flex: 1, cursor: "pointer" }} onClick={() => navigate(`/playlists/${playlist.id}`)}>
+                                <div className="playlist-card-title">{playlist.name}</div>
+                                {playlist.description && <div style={{ fontSize: "0.84rem", color: "rgba(44,36,32,0.62)", marginBottom: "0.4rem" }}>{playlist.description}</div>}
+                                <div className="playlist-card-info">
+                                    <span className="playlist-card-category" style={{ marginRight: "0.6rem" }}>{playlist.category}</span>
+                                    <span>{playlist.songCount} {playlist.songCount === 1 ? "song" : "songs"}</span>
+                                </div>
+                            </div>
+                            <div className="playlist-card-actions">
+                                <button className="ghost-btn" onClick={() => setEditingPlaylist(playlist)}>Edit</button>
+                                <button className="ghost-btn" onClick={() => removePlaylist(playlist.id)}>Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                ))
+            )}
+
+            <CreatePlaylistModal
+                isOpen={createOpen}
+                onClose={() => setCreateOpen(false)}
+                onSave={createPlaylist}
+            />
+            <CreatePlaylistModal
+                isOpen={!!editingPlaylist}
+                playlist={editingPlaylist}
+                onClose={() => setEditingPlaylist(null)}
+                onSave={updatePlaylist}
+            />
+        </div>
+    );
+}
+
+function PlaylistDetailPage() {
+    const { id } = useParams();
+    const { user } = useAuth();
+    const navigate = useNavigate();
+    const [playlist, setPlaylist] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!user) {
+            navigate("/login");
+            return;
+        }
+        apiGet(`/playlists/${id}`)
+            .then(data => setPlaylist(data))
+            .catch(err => console.error(err))
+            .finally(() => setLoading(false));
+    }, [id, user, navigate]);
+
+    async function removeSong(songId) {
+        if (!window.confirm("Remove this song from playlist?")) return;
+        await apiDelete(`/playlists/${id}/songs/${songId}`);
+        setPlaylist(prev => prev ? { ...prev, songs: prev.songs.filter(s => s.id !== songId) } : prev);
+    }
+
+    if (loading) return <div className="page loading">Loading playlist...</div>;
+    if (!playlist) return <div className="page empty">Playlist not found.</div>;
+
+    return (
+        <div className="page playlist-detail-page">
+            <div className="playlist-back" onClick={() => navigate("/playlists")}>Back to Playlists</div>
+            <div className="playlist-detail-title">{playlist.name}</div>
+            {playlist.description && <p style={{ marginTop: "0.6rem", color: "rgba(44,36,32,0.65)" }}>{playlist.description}</p>}
+            <div className="playlist-detail-info" style={{ marginTop: "0.7rem" }}>
+                <span className="playlist-card-category" style={{ marginRight: "0.6rem" }}>{playlist.category}</span>
+                <span>{playlist.songs.length} {playlist.songs.length === 1 ? "song" : "songs"}</span>
+            </div>
+
+            <div style={{ marginTop: "1.5rem" }}>
+                {playlist.songs.length === 0 ? (
+                    <div className="empty">No songs in this playlist yet.</div>
+                ) : (
+                    <>
+                        <div className="section-title">Songs</div>
+                        {playlist.songs.map((song, idx) => (
+                            <div key={`${song.id}-${idx}`} className="track">
+                                <span className="track-num">{idx + 1}</span>
+                                <div style={{ flex: 1 }}>
+                                    <div className="track-title">{song.title}</div>
+                                    <div style={{ fontSize: "0.74rem", color: "rgba(44,36,32,0.55)", marginTop: "2px" }}>
+                                        {song.albumTitle} - {song.artist}
+                                    </div>
+                                </div>
+                                <span className="track-dur">{formatTime(song.durationSeconds)}</span>
+                                <span className="track-actions">
+                                    <button className="ghost-btn" onClick={() => removeSong(song.id)}>Remove</button>
+                                </span>
+                            </div>
+                        ))}
+                    </>
+                )}
+            </div>
         </div>
     );
 }
@@ -1636,6 +2087,8 @@ export default function App() {
                 <Routes>
                     <Route path="/"                   element={<ShelfPage />} />
                     <Route path="/search"             element={<SearchPage />} />
+                    <Route path="/playlists"          element={<PlaylistsPage />} />
+                    <Route path="/playlists/:id"      element={<PlaylistDetailPage />} />
                     <Route path="/account"            element={<AccountPage />} />
                     <Route path="/profile/:username"  element={<ProfilePage />} />
                     <Route path="/signup"             element={<SignupPage />} />

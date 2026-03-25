@@ -110,6 +110,25 @@ class Database {
             addColumnIfMissing(conn, "albums", "is_single", "INTEGER NOT NULL DEFAULT 0");
             addColumnIfMissing(conn, "songs", "lyrics", "TEXT DEFAULT ''");
             addColumnIfMissing(conn, "ratings", "updated_at", "TEXT");
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS playlists (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    name TEXT NOT NULL,
+                    description TEXT DEFAULT '',
+                    category TEXT DEFAULT 'Custom',
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+                """);
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS playlist_songs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    playlist_id INTEGER NOT NULL,
+                    song_id INTEGER NOT NULL,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(playlist_id, song_id)
+                )
+                """);
             stmt.execute("UPDATE users SET created_at = COALESCE(NULLIF(created_at, ''), CURRENT_TIMESTAMP)");
             stmt.execute("UPDATE users SET display_name = COALESCE(NULLIF(display_name, ''), username)");
             stmt.execute("UPDATE users SET bio = COALESCE(bio, '')");
@@ -119,6 +138,8 @@ class Database {
             stmt.execute("UPDATE ratings SET updated_at = COALESCE(NULLIF(updated_at, ''), CURRENT_TIMESTAMP)");
             stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_album_identity ON albums(title, artist)");
             stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_song_identity ON songs(album_id, track_number, title)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_playlists_user ON playlists(user_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_playlist_songs_playlist ON playlist_songs(playlist_id)");
         } catch (SQLException e) {
             System.out.println("Error ensuring schema: " + e.getMessage());
         }
@@ -762,6 +783,228 @@ class Database {
         }
     }
 
+    // ------- PLAYLIST METHODS -------
+
+    private boolean playlistOwnedByUser(Connection conn, long playlistId, long userId) throws SQLException {
+        String sql = "SELECT id FROM playlists WHERE id = ? AND user_id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, playlistId);
+            stmt.setLong(2, userId);
+            return stmt.executeQuery().next();
+        }
+    }
+
+    private boolean songExists(Connection conn, long songId) throws SQLException {
+        try (PreparedStatement stmt = conn.prepareStatement("SELECT id FROM songs WHERE id = ?")) {
+            stmt.setLong(1, songId);
+            return stmt.executeQuery().next();
+        }
+    }
+
+    private boolean albumExists(Connection conn, long albumId) throws SQLException {
+        try (PreparedStatement stmt = conn.prepareStatement("SELECT id FROM albums WHERE id = ?")) {
+            stmt.setLong(1, albumId);
+            return stmt.executeQuery().next();
+        }
+    }
+
+    long createPlaylist(long userId, String name, String description, String category) {
+        String sql = "INSERT INTO playlists (user_id, name, description, category) VALUES (?, ?, ?, ?)";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            stmt.setLong(1, userId);
+            stmt.setString(2, name);
+            stmt.setString(3, description);
+            stmt.setString(4, category);
+            stmt.executeUpdate();
+            ResultSet keys = stmt.getGeneratedKeys();
+            if (keys.next()) return keys.getLong(1);
+            throw new RuntimeException("Playlist insert succeeded but no ID returned");
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not create playlist: " + e.getMessage());
+        }
+    }
+
+    List<Map<String, Object>> getPlaylistsByUser(long userId) {
+        String sql = """
+            SELECT p.id, p.name, p.description, p.category, p.created_at,
+                   COUNT(ps.id) AS song_count
+            FROM playlists p
+            LEFT JOIN playlist_songs ps ON ps.playlist_id = p.id
+            WHERE p.user_id = ?
+            GROUP BY p.id
+            ORDER BY p.id DESC
+            """;
+        List<Map<String, Object>> playlists = new ArrayList<>();
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, userId);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                Map<String, Object> playlist = new HashMap<>();
+                playlist.put("id", rs.getLong("id"));
+                playlist.put("name", rs.getString("name"));
+                playlist.put("description", rs.getString("description"));
+                playlist.put("category", rs.getString("category"));
+                playlist.put("createdAt", rs.getString("created_at"));
+                playlist.put("songCount", rs.getLong("song_count"));
+                playlists.add(playlist);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not get playlists: " + e.getMessage());
+        }
+        return playlists;
+    }
+
+    Map<String, Object> getPlaylistByIdForUser(long playlistId, long userId) {
+        String playlistSql = """
+            SELECT id, name, description, category, created_at
+            FROM playlists
+            WHERE id = ? AND user_id = ?
+            """;
+        String songsSql = """
+            SELECT s.id, s.title, s.track_number, s.duration_seconds,
+                   a.id AS album_id, a.title AS album_title, a.artist
+            FROM playlist_songs ps
+            JOIN songs s ON s.id = ps.song_id
+            LEFT JOIN albums a ON a.id = s.album_id
+            WHERE ps.playlist_id = ?
+            ORDER BY ps.id DESC
+            """;
+
+        try (Connection conn = getConnection();
+             PreparedStatement playlistStmt = conn.prepareStatement(playlistSql);
+             PreparedStatement songsStmt = conn.prepareStatement(songsSql)) {
+            playlistStmt.setLong(1, playlistId);
+            playlistStmt.setLong(2, userId);
+            ResultSet playlistRs = playlistStmt.executeQuery();
+            if (!playlistRs.next()) return null;
+
+            Map<String, Object> playlist = new HashMap<>();
+            playlist.put("id", playlistRs.getLong("id"));
+            playlist.put("name", playlistRs.getString("name"));
+            playlist.put("description", playlistRs.getString("description"));
+            playlist.put("category", playlistRs.getString("category"));
+            playlist.put("createdAt", playlistRs.getString("created_at"));
+
+            songsStmt.setLong(1, playlistId);
+            ResultSet songsRs = songsStmt.executeQuery();
+            List<Map<String, Object>> songs = new ArrayList<>();
+            while (songsRs.next()) {
+                Map<String, Object> song = new HashMap<>();
+                song.put("id", songsRs.getLong("id"));
+                song.put("title", songsRs.getString("title"));
+                song.put("trackNumber", songsRs.getInt("track_number"));
+                song.put("durationSeconds", songsRs.getInt("duration_seconds"));
+                song.put("albumId", songsRs.getLong("album_id"));
+                song.put("albumTitle", songsRs.getString("album_title"));
+                song.put("artist", songsRs.getString("artist"));
+                songs.add(song);
+            }
+            playlist.put("songs", songs);
+            playlist.put("songCount", songs.size());
+            return playlist;
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not get playlist: " + e.getMessage());
+        }
+    }
+
+    boolean updatePlaylist(long playlistId, long userId, String name, String description, String category) {
+        String sql = """
+            UPDATE playlists
+            SET name = ?, description = ?, category = ?
+            WHERE id = ? AND user_id = ?
+            """;
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, name);
+            stmt.setString(2, description);
+            stmt.setString(3, category);
+            stmt.setLong(4, playlistId);
+            stmt.setLong(5, userId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not update playlist: " + e.getMessage());
+        }
+    }
+
+    boolean deletePlaylist(long playlistId, long userId) {
+        String deleteSongsSql = "DELETE FROM playlist_songs WHERE playlist_id = ?";
+        String deletePlaylistSql = "DELETE FROM playlists WHERE id = ? AND user_id = ?";
+        try (Connection conn = getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement deleteSongsStmt = conn.prepareStatement(deleteSongsSql);
+                 PreparedStatement deletePlaylistStmt = conn.prepareStatement(deletePlaylistSql)) {
+                deleteSongsStmt.setLong(1, playlistId);
+                deleteSongsStmt.executeUpdate();
+
+                deletePlaylistStmt.setLong(1, playlistId);
+                deletePlaylistStmt.setLong(2, userId);
+                int deleted = deletePlaylistStmt.executeUpdate();
+
+                conn.commit();
+                return deleted > 0;
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not delete playlist: " + e.getMessage());
+        }
+    }
+
+    boolean addSongToPlaylist(long playlistId, long userId, long songId) {
+        String insertSql = "INSERT OR IGNORE INTO playlist_songs (playlist_id, song_id) VALUES (?, ?)";
+        try (Connection conn = getConnection();
+             PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+            if (!playlistOwnedByUser(conn, playlistId, userId) || !songExists(conn, songId)) return false;
+            insertStmt.setLong(1, playlistId);
+            insertStmt.setLong(2, songId);
+            insertStmt.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not add song to playlist: " + e.getMessage());
+        }
+    }
+
+    // Returns -1 if playlist ownership check fails, -2 if album does not exist, else inserted row count.
+    int addAlbumSongsToPlaylist(long playlistId, long userId, long albumId) {
+        String insertSql = """
+            INSERT OR IGNORE INTO playlist_songs (playlist_id, song_id)
+            SELECT ?, s.id FROM songs s WHERE s.album_id = ?
+            """;
+        try (Connection conn = getConnection();
+             PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+            if (!playlistOwnedByUser(conn, playlistId, userId)) return -1;
+            if (!albumExists(conn, albumId)) return -2;
+            insertStmt.setLong(1, playlistId);
+            insertStmt.setLong(2, albumId);
+            return insertStmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not add album songs to playlist: " + e.getMessage());
+        }
+    }
+
+    boolean removeSongFromPlaylist(long playlistId, long userId, long songId) {
+        String sql = """
+            DELETE FROM playlist_songs
+            WHERE playlist_id = ? AND song_id = ?
+              AND EXISTS (SELECT 1 FROM playlists p WHERE p.id = ? AND p.user_id = ?)
+            """;
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, playlistId);
+            stmt.setLong(2, songId);
+            stmt.setLong(3, playlistId);
+            stmt.setLong(4, userId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not remove song from playlist: " + e.getMessage());
+        }
+    }
+
     // ------- RATING METHODS -------
 
     // Save or update a rating (if user already rated this album, update it)
@@ -1394,6 +1637,124 @@ class ProfileController {
             "isAdmin", user.getOrDefault("isAdmin", false),
             "recentHistory", history
         ));
+    }
+}
+
+// ============================================================
+// PLAYLIST CONTROLLER
+// Lets logged-in users manage playlists made of songs only.
+// ============================================================
+
+@RestController
+@RequestMapping("/api/playlists")
+class PlaylistController {
+
+    @Autowired Database db;
+
+    private long currentUserId(UserDetails principal) {
+        Map<String, Object> user = db.findUser(principal.getUsername());
+        if (user == null) throw new UsernameNotFoundException("User not found: " + principal.getUsername());
+        return ((Number) user.get("id")).longValue();
+    }
+
+    @GetMapping
+    public List<Map<String, Object>> getMyPlaylists(@AuthenticationPrincipal UserDetails principal) {
+        return db.getPlaylistsByUser(currentUserId(principal));
+    }
+
+    @PostMapping
+    public ResponseEntity<?> createPlaylist(@RequestBody Map<String, Object> body,
+                                            @AuthenticationPrincipal UserDetails principal) {
+        String name = String.valueOf(body.getOrDefault("name", "")).trim();
+        String description = String.valueOf(body.getOrDefault("description", "")).trim();
+        String category = String.valueOf(body.getOrDefault("category", "Custom")).trim();
+
+        if (name.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Playlist name is required"));
+        }
+
+        long userId = currentUserId(principal);
+        long playlistId = db.createPlaylist(userId, name, description, category.isBlank() ? "Custom" : category);
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+            "id", playlistId,
+            "name", name,
+            "description", description,
+            "category", category.isBlank() ? "Custom" : category,
+            "songCount", 0
+        ));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getPlaylist(@PathVariable long id,
+                                         @AuthenticationPrincipal UserDetails principal) {
+        Map<String, Object> playlist = db.getPlaylistByIdForUser(id, currentUserId(principal));
+        if (playlist == null) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(playlist);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updatePlaylist(@PathVariable long id,
+                                            @RequestBody Map<String, Object> body,
+                                            @AuthenticationPrincipal UserDetails principal) {
+        String name = String.valueOf(body.getOrDefault("name", "")).trim();
+        String description = String.valueOf(body.getOrDefault("description", "")).trim();
+        String category = String.valueOf(body.getOrDefault("category", "Custom")).trim();
+        if (name.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Playlist name is required"));
+        }
+
+        boolean updated = db.updatePlaylist(id, currentUserId(principal), name, description, category.isBlank() ? "Custom" : category);
+        if (!updated) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(Map.of("message", "Playlist updated"));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deletePlaylist(@PathVariable long id,
+                                            @AuthenticationPrincipal UserDetails principal) {
+        boolean deleted = db.deletePlaylist(id, currentUserId(principal));
+        if (!deleted) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(Map.of("message", "Playlist deleted"));
+    }
+
+    @PostMapping("/{playlistId}/songs/{songId}")
+    public ResponseEntity<?> addSongToPlaylist(@PathVariable long playlistId,
+                                               @PathVariable long songId,
+                                               @AuthenticationPrincipal UserDetails principal) {
+        boolean ok = db.addSongToPlaylist(playlistId, currentUserId(principal), songId);
+        if (!ok) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "Playlist or song not found"));
+        }
+        return ResponseEntity.ok(Map.of("message", "Song added to playlist"));
+    }
+
+    // Adding an album stores each song separately in playlist_songs.
+    @PostMapping("/{playlistId}/albums/{albumId}")
+    public ResponseEntity<?> addAlbumToPlaylist(@PathVariable long playlistId,
+                                                @PathVariable long albumId,
+                                                @AuthenticationPrincipal UserDetails principal) {
+        int inserted = db.addAlbumSongsToPlaylist(playlistId, currentUserId(principal), albumId);
+        if (inserted == -1) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "Playlist not found"));
+        }
+        if (inserted == -2) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "Album not found"));
+        }
+        return ResponseEntity.ok(Map.of(
+            "message", "Album songs added to playlist",
+            "addedSongs", inserted
+        ));
+    }
+
+    @DeleteMapping("/{playlistId}/songs/{songId}")
+    public ResponseEntity<?> removeSongFromPlaylist(@PathVariable long playlistId,
+                                                    @PathVariable long songId,
+                                                    @AuthenticationPrincipal UserDetails principal) {
+        boolean removed = db.removeSongFromPlaylist(playlistId, currentUserId(principal), songId);
+        if (!removed) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Song not found in playlist"));
+        return ResponseEntity.ok(Map.of("message", "Song removed from playlist"));
     }
 }
 
