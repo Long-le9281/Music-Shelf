@@ -50,14 +50,18 @@ public class DataSourcing {
         String genre = (args.length > 0) ? args[0] : "rock";
         int    limit = (args.length > 1) ? Integer.parseInt(args[1]) : 20;
 
-        System.out.println("Fetching \"" + genre + "\" tracks from iTunes (limit=" + limit + ")...");
+        ensureCsvFiles();
+        Set<String> existingAlbums = readExistingAlbumKeys();
+        Set<String> existingSongs = readExistingSongKeys();
 
-        List<TrackData> tracks = fetchFromItunes(genre, limit);
+        System.out.println("Fetching up to " + limit + " NEW tracks from iTunes for \"" + genre + "\"...");
+
+        List<TrackData> tracks = fetchUniqueFromItunes(genre, limit, existingSongs);
         if (tracks.isEmpty()) {
-            System.out.println("No tracks fetched. Exiting.");
+            System.out.println("No new unique tracks found. Exiting.");
             return;
         }
-        System.out.println("Fetched " + tracks.size() + " tracks.");
+        System.out.println("Fetched " + tracks.size() + " new unique tracks.");
 
         // Fetch lyrics for each track (best-effort; failures return "")
         System.out.println("Fetching lyrics from Genius...");
@@ -65,22 +69,50 @@ public class DataSourcing {
             t.lyrics = fetchLyricsFromGenius(t.songTitle, t.artist);
         }
 
-        ensureCsvFiles();
-        Set<String> existingAlbums = readExistingAlbumKeys();
-        Set<String> existingSongs = readExistingSongKeys();
-
         int albumsAdded = appendAlbumsCsv(tracks, existingAlbums);
         int songsAdded = appendSongsCsv(tracks, existingSongs);
 
         System.out.println("Done. Added " + albumsAdded + " new albums and " + songsAdded + " new songs to CSV.");
     }
 
-    static List<TrackData> fetchFromItunes(String searchTerm, int limit) {
+    static List<TrackData> fetchUniqueFromItunes(String searchTerm, int targetCount, Set<String> existingSongKeys) {
+        List<TrackData> uniqueTracks = new ArrayList<>();
+        Set<String> seenThisRun = new HashSet<>();
+
+        final int pageSize = 50;
+        final int maxPages = 20;
+
+        for (int page = 0; page < maxPages && uniqueTracks.size() < targetCount; page++) {
+            int offset = page * pageSize;
+            List<TrackData> pageTracks = fetchFromItunesPage(searchTerm, pageSize, offset);
+            if (pageTracks.isEmpty()) {
+                break;
+            }
+
+            for (TrackData t : pageTracks) {
+                String key = normalize(t.artist) + "|" + normalize(t.albumTitle) + "|" + normalize(t.songTitle);
+                if (existingSongKeys.contains(key) || !seenThisRun.add(key)) {
+                    continue;
+                }
+                uniqueTracks.add(t);
+                if (uniqueTracks.size() >= targetCount) {
+                    break;
+                }
+            }
+        }
+
+        if (uniqueTracks.size() < targetCount) {
+            System.out.println("Only found " + uniqueTracks.size() + " new unique tracks (requested " + targetCount + ").");
+        }
+        return uniqueTracks;
+    }
+
+    static List<TrackData> fetchFromItunesPage(String searchTerm, int limit, int offset) {
         List<TrackData> tracks = new ArrayList<>();
         try {
             String query = URLEncoder.encode(searchTerm, "UTF-8");
             String urlStr = "https://itunes.apple.com/search?term=" + query
-                    + "&media=music&entity=song&limit=" + limit;
+                    + "&media=music&entity=song&limit=" + limit + "&offset=" + offset;
 
             URL url = new URL(urlStr);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -120,7 +152,6 @@ public class DataSourcing {
                         ? parseIntSafe(releaseDate.substring(0, 4))
                         : 0;
 
-                // Upgrade thumbnail URL when available
                 t.artUrl = safe(item.optString("artworkUrl100", ""))
                         .replace("100x100bb", "600x600bb");
 
