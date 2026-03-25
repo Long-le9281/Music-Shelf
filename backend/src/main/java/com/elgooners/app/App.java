@@ -53,10 +53,14 @@ import org.springframework.stereotype.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.cors.*;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 
 import javax.crypto.SecretKey;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.*;
 import java.util.*;
 
@@ -80,11 +84,15 @@ class App {
 @Component
 class Database {
 
-    // Path to the SQLite database file (relative to where you run the app)
-    private static final String DB_PATH = System.getProperty("user.dir")
+    private static final String PROJECT_ROOT = System.getProperty("user.dir")
             .replace("\\backend", "")
-            .replace("/backend", "")
-            + "/database/elgooners.db";
+            .replace("/backend", "");
+
+    @Value("${recordshelf.db.path:}")
+    private String configuredDbPath;
+
+    @Value("${recordshelf.catalog.dir:}")
+    private String configuredCatalogDir;
 
     private final BCryptPasswordEncoder seedPasswordEncoder = new BCryptPasswordEncoder();
 
@@ -92,12 +100,304 @@ class Database {
     void init() {
         ensureSchema();
         seedUsers();
+        importCatalogFromCsv();
         ensurePrimaryAlbumsHaveSongs();
+    }
+
+    private void importCatalogFromCsv() {
+        Path albumsCsv = resolveCatalogPath("albums.csv");
+        Path songsCsv = resolveCatalogPath("songs.csv");
+
+        if (!Files.exists(albumsCsv) || !Files.exists(songsCsv)) {
+            System.out.println("CSV import skipped (catalog files not found): " + albumsCsv + " and " + songsCsv);
+            return;
+        }
+
+        int albumsInserted = 0;
+        int songsInserted = 0;
+        int albumRowsSeen = 0;
+        int songRowsSeen = 0;
+
+        try (Connection conn = getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                Map<String, Long> albumIdsByKey = loadAlbumIdentityMap(conn);
+
+                try (java.io.BufferedReader reader = Files.newBufferedReader(albumsCsv)) {
+                    String line;
+                    boolean first = true;
+                    while ((line = reader.readLine()) != null) {
+                        if (first) {
+                            first = false;
+                            continue;
+                        }
+                        if (line.isBlank()) continue;
+                        albumRowsSeen++;
+
+                        List<String> parts = parseCsvLine(line);
+                        if (parts.size() < 2) continue;
+
+                        String artist = csvCell(parts, 0);
+                        String albumTitle = csvCell(parts, 1);
+                        int releaseYear = parseIntOrDefault(csvCell(parts, 2), 0);
+                        String albumArtUrl = csvCell(parts, 4);
+
+                        if (artist.isBlank() || albumTitle.isBlank()) continue;
+
+                        String albumKey = normalizeKey(albumTitle) + "|" + normalizeKey(artist);
+                        Long albumId = albumIdsByKey.get(albumKey);
+                        if (albumId == null) {
+                            albumId = insertImportedAlbum(conn, albumTitle, artist, releaseYear, albumArtUrl);
+                            albumIdsByKey.put(albumKey, albumId);
+                            albumsInserted++;
+                        } else {
+                            updateImportedAlbumMetadata(conn, albumId, releaseYear, albumArtUrl);
+                        }
+                    }
+                }
+
+                String songInsertSql = """
+                    INSERT OR IGNORE INTO songs (album_id, title, track_number, duration_seconds, lyrics)
+                    VALUES (?, ?, ?, ?, ?)
+                    """;
+
+                try (java.io.BufferedReader reader = Files.newBufferedReader(songsCsv);
+                     PreparedStatement insertSong = conn.prepareStatement(songInsertSql)) {
+                    String line;
+                    boolean first = true;
+                    while ((line = reader.readLine()) != null) {
+                        if (first) {
+                            first = false;
+                            continue;
+                        }
+                        if (line.isBlank()) continue;
+                        songRowsSeen++;
+
+                        List<String> parts = parseCsvLine(line);
+                        if (parts.size() < 6) continue;
+
+                        String artist = csvCell(parts, 0);
+                        String albumTitle = csvCell(parts, 1);
+                        int releaseYear = parseIntOrDefault(csvCell(parts, 2), 0);
+                        int trackNumber = Math.max(0, parseIntOrDefault(csvCell(parts, 3), 0));
+                        String songTitle = csvCell(parts, 4);
+                        int durationSeconds = Math.max(0, parseIntOrDefault(csvCell(parts, 5), 0));
+
+                        if (artist.isBlank() || albumTitle.isBlank() || songTitle.isBlank()) continue;
+
+                        String albumKey = normalizeKey(albumTitle) + "|" + normalizeKey(artist);
+                        Long albumId = albumIdsByKey.get(albumKey);
+                        if (albumId == null) {
+                            albumId = insertImportedAlbum(conn, albumTitle, artist, releaseYear, "");
+                            albumIdsByKey.put(albumKey, albumId);
+                            albumsInserted++;
+                        }
+
+                        insertSong.setLong(1, albumId);
+                        insertSong.setString(2, songTitle);
+                        insertSong.setInt(3, trackNumber);
+                        insertSong.setInt(4, durationSeconds);
+                        insertSong.setString(5, "");
+                        songsInserted += insertSong.executeUpdate();
+                    }
+                }
+
+                conn.commit();
+                System.out.println("CSV import complete: scanned " + albumRowsSeen + " albums and " + songRowsSeen + " songs; inserted " + albumsInserted + " albums and " + songsInserted + " songs.");
+            } catch (Exception e) {
+                conn.rollback();
+                System.out.println("CSV import failed; rolled back transaction: " + e.getMessage());
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            System.out.println("Error during CSV import setup: " + e.getMessage());
+        }
+    }
+
+    private Path resolveCatalogPath(String fileName) {
+        if (configuredCatalogDir != null && !configuredCatalogDir.isBlank()) {
+            Path catalogDir = Paths.get(configuredCatalogDir);
+            if (!catalogDir.isAbsolute()) {
+                catalogDir = Paths.get(PROJECT_ROOT).resolve(catalogDir);
+            }
+            return catalogDir.resolve(fileName).toAbsolutePath().normalize();
+        }
+        return Paths.get(PROJECT_ROOT, "database", fileName).toAbsolutePath().normalize();
+    }
+
+    private String resolveDbPath() {
+        if (configuredDbPath != null && !configuredDbPath.isBlank()) {
+            Path dbPath = Paths.get(configuredDbPath);
+            if (!dbPath.isAbsolute()) {
+                dbPath = Paths.get(PROJECT_ROOT).resolve(dbPath);
+            }
+            return dbPath.toAbsolutePath().normalize().toString();
+        }
+        return Paths.get(PROJECT_ROOT, "database", "recordshelf.db").toAbsolutePath().normalize().toString();
+    }
+
+    private Map<String, Long> loadAlbumIdentityMap(Connection conn) throws SQLException {
+        Map<String, Long> map = new HashMap<>();
+        String sql = "SELECT id, title, artist FROM albums";
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                String key = normalizeKey(rs.getString("title")) + "|" + normalizeKey(rs.getString("artist"));
+                map.put(key, rs.getLong("id"));
+            }
+        }
+        return map;
+    }
+
+    private long insertImportedAlbum(Connection conn,
+                                     String title,
+                                     String artist,
+                                     int releaseYear,
+                                     String albumArtUrl) throws SQLException {
+        String sql = """
+            INSERT INTO albums (title, artist, release_year, genre, description, color1, color2, album_art_url, is_single)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+            """;
+        try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            stmt.setString(1, title);
+            stmt.setString(2, artist);
+            stmt.setInt(3, releaseYear);
+            stmt.setString(4, "Imported");
+            stmt.setString(5, "Imported from RecordShelfDemo catalog");
+            stmt.setString(6, "#333333");
+            stmt.setString(7, "#555555");
+            stmt.setString(8, albumArtUrl == null ? "" : albumArtUrl);
+            stmt.executeUpdate();
+            ResultSet keys = stmt.getGeneratedKeys();
+            if (keys.next()) return keys.getLong(1);
+        }
+        throw new SQLException("Album insert succeeded but no ID was generated");
+    }
+
+    private void updateImportedAlbumMetadata(Connection conn,
+                                             long albumId,
+                                             int releaseYear,
+                                             String albumArtUrl) throws SQLException {
+        String sql = """
+            UPDATE albums
+            SET album_art_url = CASE
+                    WHEN COALESCE(NULLIF(album_art_url, ''), '') = '' AND ? <> '' THEN ?
+                    ELSE album_art_url
+                END,
+                release_year = CASE
+                    WHEN COALESCE(release_year, 0) = 0 AND ? > 0 THEN ?
+                    ELSE release_year
+                END
+            WHERE id = ?
+            """;
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            String safeArt = albumArtUrl == null ? "" : albumArtUrl;
+            stmt.setString(1, safeArt);
+            stmt.setString(2, safeArt);
+            stmt.setInt(3, releaseYear);
+            stmt.setInt(4, releaseYear);
+            stmt.setLong(5, albumId);
+            stmt.executeUpdate();
+        }
+    }
+
+    private String csvCell(List<String> cells, int index) {
+        if (index < 0 || index >= cells.size()) return "";
+        String value = cells.get(index);
+        return value == null ? "" : value.trim();
+    }
+
+    private int parseIntOrDefault(String value, int defaultValue) {
+        try {
+            return Integer.parseInt(value == null ? "" : value.trim());
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    private String normalizeKey(String value) {
+        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private List<String> parseCsvLine(String line) {
+        ArrayList<String> values = new ArrayList<>();
+        if (line == null) return values;
+
+        StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (c == '"') {
+                if (inQuotes && i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                    current.append('"');
+                    i++;
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (c == ',' && !inQuotes) {
+                values.add(current.toString());
+                current.setLength(0);
+            } else {
+                current.append(c);
+            }
+        }
+        values.add(current.toString());
+        return values;
     }
 
     private void ensureSchema() {
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    avatar_color TEXT DEFAULT '#FF6B6B',
+                    is_admin INTEGER NOT NULL DEFAULT 0,
+                    bio TEXT DEFAULT '',
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    display_name TEXT,
+                    is_active INTEGER NOT NULL DEFAULT 1,
+                    disabled_at TEXT,
+                    deleted_at TEXT,
+                    password_reset_at TEXT
+                )
+                """);
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS albums (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    artist TEXT NOT NULL,
+                    release_year INTEGER,
+                    genre TEXT,
+                    description TEXT,
+                    color1 TEXT DEFAULT '#333333',
+                    color2 TEXT DEFAULT '#555555',
+                    album_art_url TEXT DEFAULT '',
+                    is_single INTEGER NOT NULL DEFAULT 0
+                )
+                """);
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS songs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    album_id INTEGER,
+                    title TEXT NOT NULL,
+                    track_number INTEGER,
+                    duration_seconds INTEGER,
+                    lyrics TEXT DEFAULT ''
+                )
+                """);
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS ratings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    album_id INTEGER NOT NULL,
+                    stars INTEGER NOT NULL,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(user_id, album_id)
+                )
+                """);
             addColumnIfMissing(conn, "users", "is_admin", "INTEGER NOT NULL DEFAULT 0");
             addColumnIfMissing(conn, "users", "bio", "TEXT DEFAULT ''");
             addColumnIfMissing(conn, "users", "created_at", "TEXT");
@@ -129,6 +429,11 @@ class Database {
                     UNIQUE(playlist_id, song_id)
                 )
                 """);
+            // Migrate older playlist schemas that were created before these columns existed.
+            addColumnIfMissing(conn, "playlists", "description", "TEXT DEFAULT ''");
+            addColumnIfMissing(conn, "playlists", "category", "TEXT DEFAULT 'Custom'");
+            addColumnIfMissing(conn, "playlists", "created_at", "TEXT DEFAULT CURRENT_TIMESTAMP");
+            addColumnIfMissing(conn, "playlist_songs", "created_at", "TEXT DEFAULT CURRENT_TIMESTAMP");
             stmt.execute("UPDATE users SET created_at = COALESCE(NULLIF(created_at, ''), CURRENT_TIMESTAMP)");
             stmt.execute("UPDATE users SET display_name = COALESCE(NULLIF(display_name, ''), username)");
             stmt.execute("UPDATE users SET bio = COALESCE(bio, '')");
@@ -215,11 +520,16 @@ class Database {
 
     // Opens a connection to the database
     Connection getConnection() throws SQLException {
-        System.out.println("Looking for DB at: " + DB_PATH);
-        java.io.File f = new java.io.File(DB_PATH);
+        String dbPath = resolveDbPath();
+        java.io.File f = new java.io.File(dbPath);
+        java.io.File parent = f.getParentFile();
+        if (parent != null && !parent.exists()) {
+            parent.mkdirs();
+        }
+        System.out.println("Looking for DB at: " + dbPath);
         System.out.println("File exists: " + f.exists());
         System.out.println("Absolute path: " + f.getAbsolutePath());
-        return DriverManager.getConnection("jdbc:sqlite:" + DB_PATH);
+        return DriverManager.getConnection("jdbc:sqlite:" + dbPath);
     }
 
     // ------- USER METHODS -------
@@ -1233,6 +1543,7 @@ class SecurityConfig {
         http
             .cors(cors -> cors.configurationSource(corsConfig()))
             .csrf(csrf -> csrf.disable()) // disabled because we use JWT instead
+            .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 // These endpoints anyone can access (no login needed)

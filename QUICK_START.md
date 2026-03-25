@@ -5,7 +5,7 @@
 ### Prerequisites
 - Node.js and npm installed
 - Backend running on port 8080 (Java)
-- Database set up (run `database/setup.py`)
+- Database source files present in `database/` (`albums.csv`, `songs.csv`)
 
 ### Starting the Frontend
 

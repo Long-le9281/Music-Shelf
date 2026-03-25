@@ -45,8 +45,24 @@ async function callApi(path, options = {}) {
         },
         ...options,
     });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || "Something went wrong");
+    const raw = await response.text();
+    let data = {};
+    try {
+        data = raw ? JSON.parse(raw) : {};
+    } catch (e) {
+        data = {};
+    }
+    if (!response.ok) {
+        const message = data.error || data.message || raw || `Request failed (${response.status})`;
+        if (response.status === 401 || response.status === 403) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            if (window.location.pathname !== "/login") {
+                window.location.assign("/login");
+            }
+        }
+        throw new Error(message);
+    }
     return data;
 }
 

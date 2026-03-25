@@ -9,7 +9,10 @@
 elgooners/
 │
 ├── database/
-│   └── setup.py          ← Run this FIRST. Creates the database + 25 albums.
+│   ├── DataSourcing.java ← Catalog sourcing tool from Updating-Database branch
+│   ├── albums.csv        ← Source catalog for backend import
+│   ├── songs.csv         ← Source tracks for backend import
+│   └── recordshelf.db    ← Runtime SQLite DB (auto-created by backend)
 │
 ├── backend/
 │   ├── pom.xml           ← Maven config (dependencies)
@@ -26,15 +29,9 @@ elgooners/
 
 ## Step-by-Step Setup (Do This Once)
 
-### Step 1 — Set Up the Database
-Make sure Python 3 is installed. Then:
-```
-cd database
-python setup.py
-```
-This creates `database/elgooners.db` with all tables and 25 seed albums.
-You only need to do this once. If you mess up the data, just delete
-`elgooners.db` and run `setup.py` again.
+### Step 1 — Database Source Files
+The backend now uses CSV files from `database/` and creates SQLite automatically.
+No Python setup step is required.
 
 ---
 
@@ -84,7 +81,7 @@ App opens automatically at: http://localhost:3000
 
 | File | Owner | User Stories |
 |------|-------|-------------|
-| `database/setup.py` | Brandon + Thanh | Schema design |
+| `database/DataSourcing.java` | Brandon + Thanh | Schema/data sourcing |
 | `backend/App.java` — Auth section | Brandon + Thanh | US1, US2 |
 | `backend/App.java` — Search section | Brandon | US3 |
 | `backend/App.java` — Rating section | Brandon + Danyal | US4 |
@@ -117,9 +114,9 @@ In `App.jsx`:
 3. Add a nav link in `<Navbar>`: `<Link to="/my-page">My Page</Link>`
 
 ### New Database Column
-1. Add the column to `setup.py` in the `CREATE TABLE` block
-2. Delete `elgooners.db` and run `python setup.py` again
-3. Update the SQL queries in the `Database` class in `App.java`
+1. Add migration logic in the `Database.ensureSchema()` section in `App.java`
+2. Delete `database/recordshelf.db` (optional reset)
+3. Restart backend so schema/import runs again
 
 ---
 
@@ -130,8 +127,8 @@ In `App.jsx`:
   `server.port=8080` in `backend/src/main/resources/application.properties`
 
 **"No albums found" on the shelf**
-→ You haven't run `python setup.py` yet, or the database path is wrong.
-  Check that `database/elgooners.db` exists.
+→ Check backend logs for CSV import output and ensure `database/albums.csv`
+  and `database/songs.csv` exist.
 
 **CORS error in browser console**
 → Make sure the backend is running on port 8080 before starting the frontend.
