@@ -264,6 +264,7 @@ mvn -Dtest=Iteration3ToDoColumnRedDemo test
 
 # 📌 6. Task Board (Updated)
 
+<img width="1072" height="905" alt="Updated burn-down" src="https://github.com/user-attachments/assets/d0345a48-0dc7-48e5-8aab-97369b19593b" />
 
 
 ---
@@ -274,6 +275,7 @@ mvn -Dtest=Iteration3ToDoColumnRedDemo test
 
 ## Iteration 2 Burndown
 
+<img width="600" height="371" alt="Iteration_2_Finalized_Burndown_Chart" src="https://github.com/user-attachments/assets/3409f619-1b3a-404d-8ef5-1be5120a9f98" />
 
 
 ---
