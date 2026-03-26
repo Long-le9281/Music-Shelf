@@ -211,9 +211,6 @@ mvn -Dtest=Iteration3ToDoColumnRedDemo test
 
 ## 🟢 Iteration 1 — Done Column Tests
 
-```bash
-mvn -Dtest=Iteration1DoneColumnTest test
-```
 
 ```
 ✔ EL-22  Create an account / signup-login:
@@ -232,9 +229,6 @@ mvn -Dtest=Iteration1DoneColumnTest test
 
 ## 🟢 Iteration 2 — In Progress Column Tests
 
-```bash
-mvn -Dtest=Iteration2InProgressColumnTest test
-```
 
 ```
 ✔ EL-13  Create custom albums or playlists:
@@ -253,9 +247,7 @@ mvn -Dtest=Iteration2InProgressColumnTest test
 
 ## 🔴 Iteration 3 — To-Do Column (Red Phase)
 
-```bash
-mvn -Dtest=Iteration3ToDoColumnRedDemo test
-```
+
 
 ```
 ✘ EL-15  Finding other/friends profiles is not implemented yet
