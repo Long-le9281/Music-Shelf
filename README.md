@@ -3,6 +3,13 @@
 
 ---
 
+## Lab 9 Demo Runbook
+
+For the rubric-aligned build/run scripts, TDD demo commands, and presentation checklist, see:
+- `LAB9_DEMO_PRESENTATION.md`
+
+---
+
 ## Folder Structure
 
 ```
