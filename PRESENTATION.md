@@ -277,48 +277,7 @@ mvn -Dtest=Iteration3ToDoColumnRedDemo test
 
 # 📌 6. Task Board (Updated)
 
-## Current Board State
-
-| Column | Count | Items |
-|--------|-------|-------|
-| ✅ Done | 8 | EL-22, EL-14, EL-11, EL-24, EL-17, EL-13, EL-3, EL-2 |
-| 🔄 In Progress | 2 | EL-25 Burndown Chart, EL-23 Update Trello |
-| 📋 To Do | 4 | EL-15, EL-5, EL-16, EL-20 |
-
----
-
-## ✅ Done (8 Items)
-
-| ID | Feature | Iteration | Story Points |
-|----|---------|-----------|-------------|
-| EL-22 | Create an account; Sign-up & Login System | Iteration 1 | 3 days |
-| EL-14 | Star Ratings and Assigning Favorites | Iteration 1 | 3 days |
-| EL-11 | Search Bar | Iteration 1 | 3 days |
-| EL-24 | View User Profile Page | Iteration 1 | 3 days |
-| EL-17 | Record Shelf UI Design | Iteration 2 | 3 days |
-| EL-13 | Create Custom Albums or Playlists | Iteration 2 | 2 days |
-| EL-3  | User Authentication & Roles | Iteration 2 | 2 days |
-| EL-2  | Database & Data Sourcing | Iteration 2 | 2 days |
-
----
-
-## 🔄 In Progress (2 Items)
-
-| ID | Feature | Notes |
-|----|---------|-------|
-| EL-25 | Burndown Chart | Tracking/admin task — spans all iterations |
-| EL-23 | Update The Trello | Tracking/admin task — spans all iterations |
-
----
-
-## 📋 To Do (4 Items — Iteration 3)
-
-| ID | Feature | Estimate |
-|----|---------|---------|
-| EL-15 | Finding Other / Friends Profiles | 3 days |
-| EL-5  | Number / Total Time of Song Listens | 3 days |
-| EL-16 | Sorting Profiles by Genre | 1 day |
-| EL-20 | Comments (optional) | 2 days |
+![Task Board](docs/taskboard.png)
 
 ---
 
@@ -328,25 +287,7 @@ mvn -Dtest=Iteration3ToDoColumnRedDemo test
 
 ## Iteration 2 Burndown
 
-```
-Features
-12 |
-11 |         ●  ← spike day 3 (scope adjustment)
-10 | ●  ●  ●     ●  ━━━━━━━━━━━━━━━━ Ideal Trend
- 9 |               ●  ●
- 8 |
- 7 |
- 6 |                     ●  ●
- 5 |
- 4 |                           ●  ●
- 3 |
- 2 |                                 ●
- 1 |
- 0 |                                       ●
-    D0  D1  D2  D3  D4  D5  D6  D7  D8  D9  D10 D11 D12 D13 D14
-```
-
-**Red line** = Remaining Effort &nbsp;&nbsp; **Black line** = Ideal Trend
+![Iteration 2 Burndown Chart](docs/burndown.png)
 
 ---
 
