@@ -103,16 +103,15 @@ npm start
 ## All Members Have Check-ins
 
 ```
-git shortlog -sn --all
+Commit history
 ```
 
 ```
-15  DariusKallistas
+10  Darius Kallistas
  8  Brandon Dias
  6  Epicfunguyddan
  5  Daniyal
- 4  Thanh Long Le
- 1  Darius Kallistas
+ 6  Thanh Long Le
 ```
 
 ---
@@ -124,14 +123,10 @@ git branch -a
 ```
 
 ```
-* Frontend                      ← active working branch
-  Updating-Database
-  main
   remotes/origin/Frontend
-  remotes/origin/Updating-Database
+  remotes/origin/Backend
+  remotes/origin/Database&Controller
   remotes/origin/Database-&-data-sourcing
-  remotes/origin/new-stack
-  remotes/origin/new-ui
   remotes/origin/main
 ```
 
@@ -277,7 +272,7 @@ mvn -Dtest=Iteration3ToDoColumnRedDemo test
 
 # 📌 6. Task Board (Updated)
 
-![Task Board](docs/taskboard.png)
+
 
 ---
 
@@ -287,24 +282,25 @@ mvn -Dtest=Iteration3ToDoColumnRedDemo test
 
 ## Iteration 2 Burndown
 
-![Iteration 2 Burndown Chart](docs/burndown.png)
+
 
 ---
 
 ## Velocity Calculation
 
-### Story Points Per Iteration
-
-| Iteration | Features Completed | Story Points | Duration |
-|-----------|-------------------|-------------|---------|
-| Iteration 1 | 4 features | EL-22 (3) + EL-14 (3) + EL-11 (3) + EL-24 (3) = **12 pts** | 14 days |
-| Iteration 2 | 4 features | EL-17 (3) + EL-13 (2) + EL-3 (2) + EL-2 (2) = **9 pts** | 14 days |
-
-### Average Velocity
-
-```
 Velocity = (12 + 9) / 2  =  10.5 story points per sprint
 ```
+## Velocity Trend
+
+| Sprint | Story Points | Trend |
+|--------|-------------|-------|
+| Iteration 1 | 12 pts | Baseline |
+| Iteration 2 | 9 pts | ↓ Slight decrease — UI complexity higher than estimated |
+| Average | **10.5 pts/sprint** | Stable |
+
+> The Day 3 spike in the burndown was caused by scope re-assessment after merging `Updating-Database` into `Frontend` revealed additional integration work.
+
+---
 
 ### Projection for Iteration 3
 
@@ -388,17 +384,6 @@ Estimated completion at current velocity: < 1 sprint
 
 ---
 
-## Velocity Trend
-
-| Sprint | Story Points | Trend |
-|--------|-------------|-------|
-| Iteration 1 | 12 pts | Baseline |
-| Iteration 2 | 9 pts | ↓ Slight decrease — UI complexity higher than estimated |
-| Average | **10.5 pts/sprint** | Stable |
-
-> The Day 3 spike in the burndown was caused by scope re-assessment after merging `Updating-Database` into `Frontend` revealed additional integration work.
-
----
 
 ## Summary
 
