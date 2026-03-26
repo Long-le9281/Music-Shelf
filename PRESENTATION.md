@@ -282,30 +282,7 @@ mvn -Dtest=Iteration3ToDoColumnRedDemo test
 
 ## Velocity Calculation
 
-Velocity = (12 + 9) / 2  =  10.5 story points per sprint
-```
-## Velocity Trend
-
-| Sprint | Story Points | Trend |
-|--------|-------------|-------|
-| Iteration 1 | 12 pts | Baseline |
-| Iteration 2 | 9 pts | ↓ Slight decrease — UI complexity higher than estimated |
-| Average | **10.5 pts/sprint** | Stable |
-
-> The Day 3 spike in the burndown was caused by scope re-assessment after merging `Updating-Database` into `Frontend` revealed additional integration work.
-
----
-
-### Projection for Iteration 3
-
-```
-Remaining To-Do: EL-15 (3) + EL-5 (3) + EL-16 (1) + EL-20 (2) = 9 story points
-Estimated completion at current velocity: < 1 sprint
-```
-
----
-
----
+Velocity = (3.5 tasks) / 4 total  =  0.87 for sprint 2
 
 # 🐛 8. Interesting Bugs Found
 
