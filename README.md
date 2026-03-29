@@ -12,6 +12,7 @@ Elgooners Record Shelf is a full-stack app for browsing albums, searching music,
 - Runbook and rubric mapping: `LAB9_DEMO_PRESENTATION.md`
 - Quick startup and testing guide: `QUICK_START.md`
 - System test plan and workflow coverage: `docs/SYSTEM_TESTS.md`
+- Unit test documentation: `docs/UNIT_TESTS.md`
 
 ## Repository Structure
 
