@@ -85,7 +85,3 @@ mvn -Dtest=Iteration3ToDoColumnRedDemo test
   - Ensure backend is running before frontend.
 - Missing catalog data:
   - Confirm `database/albums.csv` and `database/songs.csv` are present.
-
-## 7) Related Docs
-- `README.md`
-- `LAB9_DEMO_PRESENTATION.md`
