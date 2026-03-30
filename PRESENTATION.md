@@ -454,6 +454,13 @@ Velocity = (3.5 tasks) / 4 total  =  0.87 for sprint 2
 | Bug fixes completed/mitigated | ✅ 5 documented bugs addressed in this branch (4 fixed, 1 mitigated) |
 | Testing observations | ✅ Useful + difficult aspects covered |
 
+In this iteration our team further developed Music-Shelf, a full-stack music catalog website built using a Java spring boot backend and a react frontend. Within this iteration we successfully implemented an improved looking UI, along with core user-facing features such as account authentication, album browsing, playlist creation, search functionalities, and user profile management.
+
+We followed a collaborative workflow using Git with multiple branches and consistent contributions from all team members ensuring organized development and integration. A key focus of the iteration was Test-Driven-Development, where tests were written prior to the implementation of any feature. The completed features from iteration 1 and 2 passed all unit tests, our plan is to continue using unit tests going into iteration 3 to help guide future development.
+
+Additionally, we maintained an updated trello (task board) and tracked progress using a burndown chart, achieving a sprint velocity of approximately 0.87. Through testing, we identified several bugs related to rating logic, authentication flow, UI rendering, and data accuracy, providing clear direction for future fixes. Overall this iteration strengthened both the technical implementation of our software system and our development practices.
+
+
 ### Remaining Gaps
 - Iteration 3 features remain intentionally red/TODO (comments, friends discovery, genre sort, listen metrics).
 
@@ -461,6 +468,8 @@ Velocity = (3.5 tasks) / 4 total  =  0.87 for sprint 2
 - **Single source of truth:** Edit `PRESENTATION.md` for final deck content.
 - **Submission branch decision:** Use `main` unless team explicitly agrees otherwise before merge/submission.
 - **Final pre-submit pass:** Ensure integration/system/coverage/summary sections are present and unmodified by conflicts.
+
+
 
 ---
 
