@@ -1,6 +1,4 @@
 # 🎵 Elgooners Record Shelf
-## Lab 9 — Demo Presentation
-### CSCI 2040U · March 26, 2026
 
 ---
 
@@ -366,52 +364,6 @@ Velocity = (3.5 tasks) / 4 total  =  0.87 for sprint 2
 
 ---
 
-## Bug 1 — Rating a Song Rates the Whole Album
-
-**Section:** Shelf  
-**Symptom:** Rating a single song applies the same star rating to every other song in the album and to the album itself.  
-**Root Cause:** Rating logic targets `albumId` rather than an individual `songId`; there is no per-song rating pathway.  
-**Status:** ✅ Fixed in current branch — added dedicated song rating endpoints and `song_ratings` persistence, and wired songs-mode UI to save/retrieve per-song ratings instead of album ratings.
-
----
-
-## Bug 2 — Incorrect Admin Code Boots User to Login Screen
-
-**Section:** Account  
-**Symptom:** Entering the wrong admin promotion code silently redirects to the login screen instead of showing an inline error message.  
-**Root Cause:** Auth error handling bubbles to a global 403 interceptor which triggers a logout redirect.  
-**Status:** ✅ Fixed in current branch — frontend now only auto-logs out on `401` (expired/invalid auth), while `403` shows inline error.
-
----
-
-## Bug 3 — User Lookup Shows "Doesn't Exist" Before Search
-
-**Section:** Account  
-**Symptom:** The user lookup panel shows "user does not exist" immediately on page load before any search has been attempted.  
-**Root Cause:** Component renders the empty-state error message on initial mount before the first query fires.  
-**Status:** ✅ Fixed in current branch — lookup empty-state only appears after an explicit Find action.
-
----
-
-## Bug 4 — Admin "Add to Database" Panel Visible to Non-Admins
-
-**Section:** Search  
-**Symptom:** When searching for an album or song, the "Add this to database" panel briefly flashes for non-admin users.  
-**Root Cause:** Search page did not conditionally render the panel by role.  
-**Status:** ✅ Fixed in current branch — panel now renders only for `isAdmin` users.
-
----
-
-## Bug 5 — Inaccurate Release Years for Some Albums / Songs
-
-**Section:** Shelf  
-**Symptom:** Some albums and songs display incorrect release years.  
-**Root Cause:** Data sourcing from iTunes API returned inconsistent metadata; years were not validated on import.  
-**Status:** ✅ Mitigated in current branch — release years are now validated/sanitized during import and API output; invalid years are normalized to unknown instead of displaying bad data.
-
----
-
----
 
 # 💡 12. Testing Observations
 
