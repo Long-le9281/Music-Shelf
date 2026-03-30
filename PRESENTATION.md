@@ -13,10 +13,14 @@
 3. Version Control System
 4. Test-Driven Development (TDD)
 5. Unit Test Deliverables
-6. Task Board (Updated)
-7. Burndown Chart & Velocity
-8. Interesting Bugs Found
-9. Testing Observations
+6. Integration Testing Plan
+7. System Testing Plan
+8. Coverage Strategy (Opaque / Clear / Translucent)
+9. Task Board (Updated)
+10. Burndown Chart & Velocity
+11. Interesting Bugs Found
+12. Testing Observations
+13. Summary, Remaining Gaps, and Submission Sync
 
 ---
 
@@ -266,7 +270,77 @@ mvn -Dtest=Iteration3ToDoColumnRedDemo test
 
 ---
 
-# 📌 6. Task Board (Updated)
+# 🔗 6. Integration Testing Plan
+
+Integration testing validates interactions between controllers, persistence, auth/security context, and API contracts.
+
+**Primary Artifact:** `docs/INTEGRATION_TESTS.md`
+
+| Integration Scenario | Components Exercised | Expected Result |
+|---|---|---|
+| Auth + Profile Chain | `AuthController` + JWT filter + `ProfileController` | Login token authorizes profile and account endpoints correctly |
+| Rating Persistence Flow | `RatingController` + DB ratings table + profile/account read models | New rating appears in account history and public profile |
+| Playlist Song Flow | Shelf UI action + playlist endpoints + `playlist_songs` table | Added track/album songs appear in target playlist with correct counts |
+| Admin Role Management | Promotion endpoint + admin endpoints + security roles | Elevated account can access admin operations; non-admin cannot |
+
+**Execution Approach**
+- Use seeded local data plus test users.
+- Run through API-level flows with authentication enabled.
+- Validate both response payloads and downstream read consistency.
+
+---
+
+---
+
+# 🧪 7. System Testing Plan
+
+System tests cover full end-to-end workflows from React UI to Spring Boot API to SQLite persistence.
+
+**Primary Artifact:** `docs/SYSTEM_TESTS.md`
+
+**Current Matrix Coverage:**
+- 12 scenarios (ST-01 through ST-12)
+- Core user journeys: signup/login, shelf browse, search, album rating, profile lookup, playlist CRUD, admin management
+- Includes assigned owner per scenario and explicit preconditions/steps/expected outcomes
+
+**Execution Style**
+- Manual functional walkthrough with deterministic setup
+- Repeatable runbook format suitable for demo and grading
+- Explicitly excludes Iteration 3 unimplemented features (friends/comments/sorting/listen-time)
+
+---
+
+---
+
+# 🧭 8. Coverage Strategy (Opaque / Clear / Translucent)
+
+This project deliberately mixes all three testing views to maximize confidence while staying practical.
+
+## Clear Box (CB)
+- Used heavily in unit tests (`backend/src/test/java/com/elgooners/app/`)
+- We mock `Database`, invoke controller methods directly, and assert exact response contracts
+- Best for validation logic, null/error branches, and controller-level behavior
+
+## Opaque Box (OB)
+- Used in system tests for user-visible workflows
+- Tester interacts only through UI and observable outputs (no internal implementation assumptions)
+- Best for login, navigation, lookup, search, and playlist UX outcomes
+
+## Translucent Box (TB)
+- Used for scenarios where tester knows key intermediate behavior (e.g., endpoint/data side effects) without white-box implementation coupling
+- Examples: add-song/add-album-to-playlist count changes, admin promotion enabling admin panel
+
+## Why This Is Sufficient Coverage
+- CB protects method-level correctness and edge cases
+- TB validates cross-component interaction contracts
+- OB validates real user workflows and end-user behavior
+- Combined, these cover the rubric views: **CB + TB + OB** with traceability to user stories on the task board
+
+---
+
+---
+
+# 📌 9. Task Board (Updated)
 
 <img width="1072" height="905" alt="Updated burn-down" src="https://github.com/user-attachments/assets/d0345a48-0dc7-48e5-8aab-97369b19593b" />
 
@@ -275,7 +349,7 @@ mvn -Dtest=Iteration3ToDoColumnRedDemo test
 
 ---
 
-# 📉 7. Burndown Chart & Velocity
+# 📉 10. Burndown Chart & Velocity
 
 ## Iteration 2 Burndown
 
@@ -288,7 +362,7 @@ mvn -Dtest=Iteration3ToDoColumnRedDemo test
 
 Velocity = (3.5 tasks) / 4 total  =  0.87 for sprint 2
 
-# 🐛 8. Interesting Bugs Found
+# 🐛 11. Interesting Bugs Found
 
 ---
 
@@ -297,7 +371,7 @@ Velocity = (3.5 tasks) / 4 total  =  0.87 for sprint 2
 **Section:** Shelf  
 **Symptom:** Rating a single song applies the same star rating to every other song in the album and to the album itself.  
 **Root Cause:** Rating logic targets `albumId` rather than an individual `songId`; there is no per-song rating pathway.  
-**Status:** Identified — fix requires a separate `song_ratings` table and UI toggle.
+**Status:** ✅ Fixed in current branch — added dedicated song rating endpoints and `song_ratings` persistence, and wired songs-mode UI to save/retrieve per-song ratings instead of album ratings.
 
 ---
 
@@ -306,7 +380,7 @@ Velocity = (3.5 tasks) / 4 total  =  0.87 for sprint 2
 **Section:** Account  
 **Symptom:** Entering the wrong admin promotion code silently redirects to the login screen instead of showing an inline error message.  
 **Root Cause:** Auth error handling bubbles to a global 403 interceptor which triggers a logout redirect.  
-**Status:** Identified — needs a targeted error response in the promote endpoint UI handler.
+**Status:** ✅ Fixed in current branch — frontend now only auto-logs out on `401` (expired/invalid auth), while `403` shows inline error.
 
 ---
 
@@ -315,7 +389,7 @@ Velocity = (3.5 tasks) / 4 total  =  0.87 for sprint 2
 **Section:** Account  
 **Symptom:** The user lookup panel shows "user does not exist" immediately on page load before any search has been attempted.  
 **Root Cause:** Component renders the empty-state error message on initial mount before the first query fires.  
-**Status:** Identified — should only show "No matching users" after the Find button is explicitly pressed.
+**Status:** ✅ Fixed in current branch — lookup empty-state only appears after an explicit Find action.
 
 ---
 
@@ -323,8 +397,8 @@ Velocity = (3.5 tasks) / 4 total  =  0.87 for sprint 2
 
 **Section:** Search  
 **Symptom:** When searching for an album or song, the "Add this to database" panel briefly flashes for non-admin users.  
-**Root Cause:** Visibility of the panel is controlled by a CSS transition that renders before the role check completes.  
-**Status:** Identified — panel should be conditionally rendered based on `isAdmin` flag, not just hidden with CSS.
+**Root Cause:** Search page did not conditionally render the panel by role.  
+**Status:** ✅ Fixed in current branch — panel now renders only for `isAdmin` users.
 
 ---
 
@@ -333,13 +407,13 @@ Velocity = (3.5 tasks) / 4 total  =  0.87 for sprint 2
 **Section:** Shelf  
 **Symptom:** Some albums and songs display incorrect release years.  
 **Root Cause:** Data sourcing from iTunes API returned inconsistent metadata; years were not validated on import.  
-**Status:** Known data quality issue — requires a catalog audit pass on `albums.csv` and `songs.csv`.
+**Status:** ✅ Mitigated in current branch — release years are now validated/sanitized during import and API output; invalid years are normalized to unknown instead of displaying bad data.
 
 ---
 
 ---
 
-# 💡 9. Testing Observations
+# 💡 12. Testing Observations
 
 ---
 
@@ -360,7 +434,7 @@ Velocity = (3.5 tasks) / 4 total  =  0.87 for sprint 2
 ---
 
 
-## Summary
+## 13. Summary, Remaining Gaps, and Submission Sync
 
 | Rubric Item | Status |
 |------------|--------|
@@ -370,11 +444,23 @@ Velocity = (3.5 tasks) / 4 total  =  0.87 for sprint 2
 | Trunk + branches shown | ✅ `main`, `Frontend`, `Updating-Database` |
 | TDD red test shown | ✅ `Iteration3ToDoColumnRedDemo` |
 | Full test suite | ✅ 12 tests across 4 files |
+| Integration testing plan | ✅ Included in this deck (controller/DB/auth interaction coverage) |
+| System testing plan | ✅ `docs/SYSTEM_TESTS.md` with 12 full workflow scenarios |
+| Coverage demonstration (CB/TB/OB) | ✅ Explicit rationale and mapping provided |
 | Task board updated | ✅ Done 8 / In Progress 2 / To Do 4 |
 | Burndown chart | ✅ Iteration 2 complete |
 | Velocity calculated | ✅ 10.5 story points / sprint |
 | Bugs identified | ✅ 5 bugs documented |
+| Bug fixes completed/mitigated | ✅ 5 documented bugs addressed in this branch (4 fixed, 1 mitigated) |
 | Testing observations | ✅ Useful + difficult aspects covered |
+
+### Remaining Gaps
+- Iteration 3 features remain intentionally red/TODO (comments, friends discovery, genre sort, listen metrics).
+
+### Submission Sync Checklist
+- **Single source of truth:** Edit `PRESENTATION.md` for final deck content.
+- **Submission branch decision:** Use `main` unless team explicitly agrees otherwise before merge/submission.
+- **Final pre-submit pass:** Ensure integration/system/coverage/summary sections are present and unmodified by conflicts.
 
 ---
 

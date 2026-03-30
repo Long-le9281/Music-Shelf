@@ -52,9 +52,9 @@ async function callApi(path, options = {}) {
     } catch (e) {
         data = {};
     }
-    if (!response.ok) {
-        const message = data.error || data.message || raw || `Request failed (${response.status})`;
-        if (response.status === 401 || response.status === 403) {
+        if (!response.ok) {
+            const message = data.error || data.message || raw || `Request failed (${response.status})`;
+            if (response.status === 401) {
             localStorage.removeItem("token");
             localStorage.removeItem("user");
             if (window.location.pathname !== "/login") {
@@ -798,7 +798,7 @@ function CreatePlaylistModal({ isOpen, playlist = null, onClose, onSave }) {
 }
 
 // --- 5-star rating widget ---
-function StarRating({ value, onChange }) {
+function StarRating({ value, onChange, label = "Rate this album" }) {
     const [hovered, setHovered] = useState(0);
     const labels = ["", "Awful", "Poor", "Good", "Great", "Perfect"];
 
@@ -813,7 +813,7 @@ function StarRating({ value, onChange }) {
                     onClick={() => onChange && onChange(n)}
                 >★</span>
             ))}
-            <span className="rate-label">{labels[hovered || value] || "Rate this album"}</span>
+            <span className="rate-label">{labels[hovered || value] || label}</span>
         </div>
     );
 }
@@ -822,6 +822,10 @@ function StarRating({ value, onChange }) {
 function formatTime(seconds) {
     if (!seconds) return "";
     return Math.floor(seconds / 60) + ":" + String(seconds % 60).padStart(2, "0");
+}
+
+function formatReleaseYear(year) {
+    return year && Number(year) > 0 ? year : "Unknown";
 }
 
 // ============================================================
@@ -924,13 +928,17 @@ function ShelfPage() {
             .catch(err => console.error(err));
 
         if (user) {
-            apiGet("/ratings/" + focusedAlbumId)
+            const ratingPath = songsMode && focusedSong?.id
+                ? "/ratings/songs/" + focusedSong.id
+                : "/ratings/" + focusedAlbumId;
+
+            apiGet(ratingPath)
                 .then(data => { if (!ignore) setMyRating(data.stars || 0); })
                 .catch(() => {});
         }
 
         return () => { ignore = true; };
-    }, [focusedAlbumId, user]);
+    }, [focusedAlbumId, focusedSong?.id, songsMode, user]);
 
     useEffect(() => {
         if (songsMode) {
@@ -990,10 +998,16 @@ function ShelfPage() {
 
         setMyRating(stars);
         try {
-            await apiPost("/ratings/" + focusedAlbumId, { stars });
+            if (songsMode && focusedSong?.id) {
+                await apiPost("/ratings/songs/" + focusedSong.id, { stars });
+            } else {
+                await apiPost("/ratings/" + focusedAlbumId, { stars });
+            }
             setSavedMsg(true);
             // Refresh to show updated community average
-            apiGet("/albums/" + focusedAlbumId).then(setDetail);
+            if (!songsMode) {
+                apiGet("/albums/" + focusedAlbumId).then(setDetail);
+            }
             setTimeout(() => setSavedMsg(false), 2500);
         } catch (err) {
             console.error(err);
@@ -1219,7 +1233,11 @@ function ShelfPage() {
                                         <div style={{ fontSize: "0.7rem", letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(44,36,32,0.4)", marginBottom: "0.4rem" }}>
                                             Your Rating
                                         </div>
-                                        <StarRating value={myRating} onChange={handleRate} />
+                                        <StarRating
+                                            value={myRating}
+                                            onChange={handleRate}
+                                            label={songsMode ? "Rate this song" : "Rate this album"}
+                                        />
                                         {savedMsg && <div className="saved-msg">✓ Saved!</div>}
                                         <div style={{ marginTop: "0.7rem" }}>
                                             <button className="ghost-btn" onClick={openAlbumPlaylistModal}>
@@ -1229,7 +1247,7 @@ function ShelfPage() {
                                     </>
                                 ) : (
                                     <div className="sign-in-prompt">
-                                        <Link to="/login">Sign in</Link> to rate this album
+                                        <Link to="/login">Sign in</Link> to rate this {songsMode ? "song" : "album"}
                                     </div>
                                 )}
                             </div>
@@ -1444,29 +1462,28 @@ function SearchPage() {
 
             {loading && <div className="loading">Searching…</div>}
 
-            {!loading && query && !hasResults && (
-                <>
-                    <div className="empty">No results for "{query}" in {mode}.</div>
-                    <div className="add-missing-card">
-                        <h3>Add this to the database</h3>
-                        <div className="add-missing-grid">
-                            <select value={addForm.type} onChange={(e) => setAddForm({ ...addForm, type: e.target.value })}>
-                                <option value="album">Album</option>
-                                <option value="song">Song</option>
-                            </select>
-                            <input value={addForm.title} onChange={(e) => setAddForm({ ...addForm, title: e.target.value })} placeholder="Title" />
-                            <input value={addForm.artist} onChange={(e) => setAddForm({ ...addForm, artist: e.target.value })} placeholder="Artist" />
-                            <input value={addForm.genre} onChange={(e) => setAddForm({ ...addForm, genre: e.target.value })} placeholder="Genre" />
-                            <input value={addForm.releaseYear} onChange={(e) => setAddForm({ ...addForm, releaseYear: e.target.value })} placeholder="Release Year" />
-                            {addForm.type === "song" && (
-                                <input value={addForm.albumTitle} onChange={(e) => setAddForm({ ...addForm, albumTitle: e.target.value })} placeholder="Album title (optional)" />
-                            )}
-                        </div>
-                        <div style={{ marginTop: "0.8rem", display: "flex", justifyContent: "flex-end" }}>
-                            <button className="ghost-btn" disabled={adding} onClick={addMissing}>{adding ? "Adding..." : "Add to DB"}</button>
-                        </div>
+            {!loading && query && !hasResults && <div className="empty">No results for "{query}" in {mode}.</div>}
+
+            {!loading && query && !hasResults && user?.isAdmin && (
+                <div className="add-missing-card">
+                    <h3>Add this to the database</h3>
+                    <div className="add-missing-grid">
+                        <select value={addForm.type} onChange={(e) => setAddForm({ ...addForm, type: e.target.value })}>
+                            <option value="album">Album</option>
+                            <option value="song">Song</option>
+                        </select>
+                        <input value={addForm.title} onChange={(e) => setAddForm({ ...addForm, title: e.target.value })} placeholder="Title" />
+                        <input value={addForm.artist} onChange={(e) => setAddForm({ ...addForm, artist: e.target.value })} placeholder="Artist" />
+                        <input value={addForm.genre} onChange={(e) => setAddForm({ ...addForm, genre: e.target.value })} placeholder="Genre" />
+                        <input value={addForm.releaseYear} onChange={(e) => setAddForm({ ...addForm, releaseYear: e.target.value })} placeholder="Release Year" />
+                        {addForm.type === "song" && (
+                            <input value={addForm.albumTitle} onChange={(e) => setAddForm({ ...addForm, albumTitle: e.target.value })} placeholder="Album title (optional)" />
+                        )}
                     </div>
-                </>
+                    <div style={{ marginTop: "0.8rem", display: "flex", justifyContent: "flex-end" }}>
+                        <button className="ghost-btn" disabled={adding} onClick={addMissing}>{adding ? "Adding..." : "Add to DB"}</button>
+                    </div>
+                </div>
             )}
 
             {!loading && !query && (
@@ -1482,7 +1499,7 @@ function SearchPage() {
                                 <AlbumArt color1={album.color1} color2={album.color2} artUrl={album.albumArtUrl} size="100%" style={{ height: 155 }} />
                                 <div className="album-card-info">
                                     <div className="album-card-title">{album.title}</div>
-                                    <div className="album-card-artist">{album.artist} · {album.releaseYear}</div>
+                                    <div className="album-card-artist">{album.artist} · {formatReleaseYear(album.releaseYear)}</div>
                                     {album.avgRating && (
                                         <div className="album-card-rating">★ {Number(album.avgRating).toFixed(1)}</div>
                                     )}
@@ -1774,6 +1791,7 @@ function AccountPage() {
     const [account, setAccount] = useState(null);
     const [lookupQuery, setLookupQuery] = useState("");
     const [lookupUsers, setLookupUsers] = useState([]);
+        const [lookupAttempted, setLookupAttempted] = useState(false);
     const [adminUsers, setAdminUsers] = useState([]);
     const [promotionCode, setPromotionCode] = useState("");
     const [message, setMessage] = useState("");
@@ -1821,6 +1839,7 @@ function AccountPage() {
 
     async function runLookup() {
         const q = lookupQuery.trim();
+            setLookupAttempted(true);
         if (!q) {
             setLookupUsers([]);
             return;
@@ -1936,7 +1955,14 @@ function AccountPage() {
                 <div className="account-card">
                     <h3>Lookup Users</h3>
                     <div className="inline-form">
-                        <input value={lookupQuery} onChange={(e) => setLookupQuery(e.target.value)} placeholder="Search by username or display name" />
+                        <input
+                            value={lookupQuery}
+                            onChange={(e) => {
+                                setLookupQuery(e.target.value);
+                                setLookupAttempted(false);
+                            }}
+                            placeholder="Search by username or display name"
+                        />
                         <button className="ghost-btn" onClick={runLookup}>Find</button>
                     </div>
                     <div style={{ marginTop: "0.9rem" }}>
@@ -1950,7 +1976,9 @@ function AccountPage() {
                                 {u.isAdmin && <span className="admin-pill">Admin</span>}
                             </div>
                         ))}
-                        {lookupQuery && lookupUsers.length === 0 && <div className="empty" style={{ padding: "1rem 0" }}>No matching users.</div>}
+                        {lookupAttempted && lookupQuery.trim() && lookupUsers.length === 0 && (
+                            <div className="empty" style={{ padding: "1rem 0" }}>No matching users.</div>
+                        )}
                     </div>
                 </div>
 

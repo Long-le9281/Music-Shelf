@@ -26,43 +26,83 @@ package com.elgooners.app;
  *   GET  /api/profile/{username}- get a user's profile + ratings
  */
 
-import io.jsonwebtoken.*;
-import io.jsonwebtoken.security.Keys;
-import jakarta.annotation.PostConstruct;
-import jakarta.servlet.*;
-import jakarta.servlet.http.*;
-import org.springframework.beans.factory.annotation.*;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.time.Year;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+
+import javax.crypto.SecretKey;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.*;
-import org.springframework.http.*;
-import org.springframework.security.authentication.*;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.*;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
-import org.springframework.stereotype.*;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.cors.*;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.OncePerRequestFilter;
-import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 
-import javax.crypto.SecretKey;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.sql.*;
-import java.util.*;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 // ============================================================
 // ENTRY POINT - Spring Boot starts here
@@ -139,7 +179,7 @@ class Database {
 
                         String artist = csvCell(parts, 0);
                         String albumTitle = csvCell(parts, 1);
-                        int releaseYear = parseIntOrDefault(csvCell(parts, 2), 0);
+                        int releaseYear = normalizeReleaseYear(parseIntOrDefault(csvCell(parts, 2), 0));
                         String albumArtUrl = csvCell(parts, 4);
 
                         if (artist.isBlank() || albumTitle.isBlank()) continue;
@@ -178,7 +218,7 @@ class Database {
 
                         String artist = csvCell(parts, 0);
                         String albumTitle = csvCell(parts, 1);
-                        int releaseYear = parseIntOrDefault(csvCell(parts, 2), 0);
+                        int releaseYear = normalizeReleaseYear(parseIntOrDefault(csvCell(parts, 2), 0));
                         int trackNumber = Math.max(0, parseIntOrDefault(csvCell(parts, 3), 0));
                         String songTitle = csvCell(parts, 4);
                         int durationSeconds = Math.max(0, parseIntOrDefault(csvCell(parts, 5), 0));
@@ -261,7 +301,7 @@ class Database {
         try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setString(1, title);
             stmt.setString(2, artist);
-            stmt.setInt(3, releaseYear);
+            stmt.setInt(3, normalizeReleaseYear(releaseYear));
             stmt.setString(4, "Imported");
             stmt.setString(5, "Imported from RecordShelfDemo catalog");
             stmt.setString(6, "#333333");
@@ -294,8 +334,9 @@ class Database {
             String safeArt = albumArtUrl == null ? "" : albumArtUrl;
             stmt.setString(1, safeArt);
             stmt.setString(2, safeArt);
-            stmt.setInt(3, releaseYear);
-            stmt.setInt(4, releaseYear);
+            int safeReleaseYear = normalizeReleaseYear(releaseYear);
+            stmt.setInt(3, safeReleaseYear);
+            stmt.setInt(4, safeReleaseYear);
             stmt.setLong(5, albumId);
             stmt.executeUpdate();
         }
@@ -313,6 +354,12 @@ class Database {
         } catch (NumberFormatException e) {
             return defaultValue;
         }
+    }
+
+    int normalizeReleaseYear(int year) {
+        int maxYear = Year.now().getValue() + 1;
+        if (year < 1880 || year > maxYear) return 0;
+        return year;
     }
 
     private String normalizeKey(String value) {
@@ -398,6 +445,16 @@ class Database {
                     UNIQUE(user_id, album_id)
                 )
                 """);
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS song_ratings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    song_id INTEGER NOT NULL,
+                    stars INTEGER NOT NULL,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(user_id, song_id)
+                )
+                """);
             addColumnIfMissing(conn, "users", "is_admin", "INTEGER NOT NULL DEFAULT 0");
             addColumnIfMissing(conn, "users", "bio", "TEXT DEFAULT ''");
             addColumnIfMissing(conn, "users", "created_at", "TEXT");
@@ -410,6 +467,7 @@ class Database {
             addColumnIfMissing(conn, "albums", "is_single", "INTEGER NOT NULL DEFAULT 0");
             addColumnIfMissing(conn, "songs", "lyrics", "TEXT DEFAULT ''");
             addColumnIfMissing(conn, "ratings", "updated_at", "TEXT");
+            addColumnIfMissing(conn, "song_ratings", "updated_at", "TEXT");
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS playlists (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -440,9 +498,12 @@ class Database {
             stmt.execute("UPDATE users SET is_active = COALESCE(is_active, 1)");
             stmt.execute("UPDATE albums SET is_single = COALESCE(is_single, 0)");
             stmt.execute("UPDATE albums SET is_single = 1 WHERE LOWER(TRIM(title)) IN ('single', 'singles')");
+            stmt.execute("UPDATE albums SET release_year = 0 WHERE release_year IS NULL OR release_year < 1880 OR release_year > " + (Year.now().getValue() + 1));
             stmt.execute("UPDATE ratings SET updated_at = COALESCE(NULLIF(updated_at, ''), CURRENT_TIMESTAMP)");
+            stmt.execute("UPDATE song_ratings SET updated_at = COALESCE(NULLIF(updated_at, ''), CURRENT_TIMESTAMP)");
             stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_album_identity ON albums(title, artist)");
             stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_song_identity ON songs(album_id, track_number, title)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_song_ratings_song ON song_ratings(song_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_playlists_user ON playlists(user_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_playlist_songs_playlist ON playlist_songs(playlist_id)");
         } catch (SQLException e) {
@@ -820,7 +881,7 @@ class Database {
                 album.put("id",          rs.getLong("id"));
                 album.put("title",       rs.getString("title"));
                 album.put("artist",      rs.getString("artist"));
-                album.put("releaseYear", rs.getInt("release_year"));
+                album.put("releaseYear", normalizeReleaseYear(rs.getInt("release_year")));
                 album.put("genre",       rs.getString("genre"));
                 album.put("description", rs.getString("description"));
                 album.put("color1",      rs.getString("color1"));
@@ -857,7 +918,7 @@ class Database {
                 album.put("id",          rs.getLong("id"));
                 album.put("title",       rs.getString("title"));
                 album.put("artist",      rs.getString("artist"));
-                album.put("releaseYear", rs.getInt("release_year"));
+                album.put("releaseYear", normalizeReleaseYear(rs.getInt("release_year")));
                 album.put("genre",       rs.getString("genre"));
                 album.put("description", rs.getString("description"));
                 album.put("color1",      rs.getString("color1"));
@@ -919,7 +980,7 @@ class Database {
                 song.put("albumId",         rs.getLong("album_id"));
                 song.put("albumTitle",      rs.getString("album_title"));
                 song.put("artist",          rs.getString("artist"));
-                song.put("releaseYear",     rs.getInt("release_year"));
+                song.put("releaseYear",     normalizeReleaseYear(rs.getInt("release_year")));
                 song.put("genre",           rs.getString("genre"));
                 song.put("color1",          rs.getString("color1"));
                 song.put("color2",          rs.getString("color2"));
@@ -959,7 +1020,7 @@ class Database {
                 album.put("id",          rs.getLong("id"));
                 album.put("title",       rs.getString("title"));
                 album.put("artist",      rs.getString("artist"));
-                album.put("releaseYear", rs.getInt("release_year"));
+                album.put("releaseYear", normalizeReleaseYear(rs.getInt("release_year")));
                 album.put("genre",       rs.getString("genre"));
                 album.put("color1",      rs.getString("color1"));
                 album.put("color2",      rs.getString("color2"));
@@ -1007,7 +1068,7 @@ class Database {
                 song.put("albumId", rs.getLong("album_id"));
                 song.put("albumTitle", rs.getString("album_title"));
                 song.put("artist", rs.getString("artist"));
-                song.put("releaseYear", rs.getInt("release_year"));
+                song.put("releaseYear", normalizeReleaseYear(rs.getInt("release_year")));
                 song.put("genre", rs.getString("genre"));
                 song.put("color1", rs.getString("color1"));
                 song.put("color2", rs.getString("color2"));
@@ -1050,7 +1111,7 @@ class Database {
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setString(1, title);
             stmt.setString(2, artist);
-            stmt.setInt(3, releaseYear);
+            stmt.setInt(3, normalizeReleaseYear(releaseYear));
             stmt.setString(4, genre);
             stmt.setString(5, description);
             stmt.setString(6, color1);
@@ -1348,6 +1409,51 @@ class Database {
             if (rs.next()) return rs.getInt("stars");
         } catch (SQLException e) {
             System.out.println("Error getting rating: " + e.getMessage());
+        }
+        return 0;
+    }
+
+    boolean songExists(long songId) {
+        String sql = "SELECT 1 FROM songs WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, songId);
+            return stmt.executeQuery().next();
+        } catch (SQLException e) {
+            System.out.println("Error checking song: " + e.getMessage());
+        }
+        return false;
+    }
+
+    void saveSongRating(long userId, long songId, int stars) {
+        String sql = """
+            INSERT INTO song_ratings (user_id, song_id, stars, updated_at)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(user_id, song_id) DO UPDATE SET
+                stars = excluded.stars,
+                updated_at = CURRENT_TIMESTAMP
+            """;
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, userId);
+            stmt.setLong(2, songId);
+            stmt.setInt(3, stars);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not save song rating: " + e.getMessage());
+        }
+    }
+
+    int getUserSongRating(long userId, long songId) {
+        String sql = "SELECT stars FROM song_ratings WHERE user_id = ? AND song_id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, userId);
+            stmt.setLong(2, songId);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) return rs.getInt("stars");
+        } catch (SQLException e) {
+            System.out.println("Error getting song rating: " + e.getMessage());
         }
         return 0;
     }
@@ -1771,6 +1877,7 @@ class AlbumController {
                 releaseYear = Integer.parseInt(raw.toString());
             }
         } catch (Exception ignored) {}
+        releaseYear = db.normalizeReleaseYear(releaseYear);
 
         String genre = String.valueOf(body.getOrDefault("genre", "Unknown")).trim();
         String description = String.valueOf(body.getOrDefault("description", "Added from search when no result was found.")).trim();
@@ -1888,6 +1995,46 @@ class RatingController {
         Map<String, Object> user = db.findUser(principal.getUsername());
         long userId = ((Number) user.get("id")).longValue();
         int stars = db.getUserRating(userId, albumId);
+        return ResponseEntity.ok(Map.of("stars", stars));
+    }
+
+    @PostMapping("/songs/{songId}")
+    public ResponseEntity<?> rateSong(@PathVariable long songId,
+                                      @RequestBody Map<String, Object> body,
+                                      @AuthenticationPrincipal UserDetails principal) {
+        int stars;
+        try {
+            stars = Integer.parseInt(body.get("stars").toString());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "stars must be a number 1-5"));
+        }
+        if (stars < 1 || stars > 5) {
+            return ResponseEntity.badRequest().body(Map.of("error", "stars must be between 1 and 5"));
+        }
+        if (!db.songExists(songId)) {
+            return ResponseEntity.status(404).body(Map.of("error", "Song not found"));
+        }
+
+        Map<String, Object> user = db.findUser(principal.getUsername());
+        long userId = ((Number) user.get("id")).longValue();
+        db.saveSongRating(userId, songId, stars);
+
+        return ResponseEntity.ok(Map.of(
+            "message", "Song rating saved!",
+            "stars", stars,
+            "songId", songId
+        ));
+    }
+
+    @GetMapping("/songs/{songId}")
+    public ResponseEntity<?> getMySongRating(@PathVariable long songId,
+                                             @AuthenticationPrincipal UserDetails principal) {
+        if (!db.songExists(songId)) {
+            return ResponseEntity.status(404).body(Map.of("error", "Song not found"));
+        }
+        Map<String, Object> user = db.findUser(principal.getUsername());
+        long userId = ((Number) user.get("id")).longValue();
+        int stars = db.getUserSongRating(userId, songId);
         return ResponseEntity.ok(Map.of("stars", stars));
     }
 }
