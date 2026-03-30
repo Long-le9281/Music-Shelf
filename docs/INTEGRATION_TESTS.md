@@ -27,16 +27,16 @@ Integration tests in this phase focus on interactions between:
 2. Ensure frontend is optional for API-driven integration checks.
 3. Seed baseline data in `database/`.
 4. Ensure users are available:
-   - `STANDARD_USER_A`
-   - `STANDARD_USER_B`
-   - `ADMIN_USER`
+   - `demo` (standard user)
+   - `nostalgia` (standard user)
+   - `admin` (admin user)
 
 ## Integration Test Matrix
 
 | Test ID | Scenario | Components Exercised | Preconditions | Steps | Expected Outcome | Assigned Team Member |
 |---|---|---|---|---|---|---|
-| IT-01-TB | Login token grants access to account/profile endpoints | `AuthController` + JWT filter + `ProfileController` | `STANDARD_USER_A` exists | Login with valid credentials, call `/api/auth/me`, then `/api/profile/me` | Authenticated calls succeed with consistent user identity data | Brandon Dias |
-| IT-02-CB | Invalid promotion code returns forbidden without session loss | `AuthController.promote` + frontend API error handling contract | Logged in as non-admin | POST `/api/auth/promote` with invalid code | Returns `403` error; session remains valid for further authenticated calls | Daniyal |
+| IT-01-TB | Login token grants access to account/profile endpoints | `AuthController` + JWT filter + `ProfileController` | `demo` exists | Login with valid credentials, call `/api/auth/me`, then `/api/profile/me` | Authenticated calls succeed with consistent user identity data | Brandon Dias |
+| IT-02-CB | Invalid promotion code returns forbidden without session loss | `AuthController.promote` + JWT filter + `AuthController.me` | Logged in as non-admin (`demo` or `nostalgia`) | POST `/api/auth/promote` with invalid code, then call `/api/auth/me` using the same token | First call returns `403`; second call still returns authenticated user details | Daniyal |
 | IT-03-TB | Album rating persists and propagates to read models | `RatingController` + ratings table + profile/account queries | Logged in user and known album ID | Submit rating, fetch account history and profile ratings | Rating appears consistently in both views with updated timestamp/count | Epicfunguyddan |
 | IT-04-TB | Add single song to playlist updates playlist detail | `PlaylistController` + `playlist_songs` table | Logged in user with existing playlist and song | Add song via playlist endpoint, fetch playlist detail | Playlist contains song and song count increases by one | Thanh Long Le |
 | IT-05-TB | Add full album songs to playlist updates count by track total | `PlaylistController` + songs query + `playlist_songs` table | Logged in user, existing playlist, known album with songs | Add album songs to playlist endpoint, fetch playlist detail | Playlist count increases by album track count (dedupe rules respected) | Darius Kallistas |

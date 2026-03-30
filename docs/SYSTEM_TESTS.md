@@ -39,9 +39,9 @@ Before running the system tests:
 2. Start the frontend at `http://localhost:3000`.
 3. Ensure seeded catalog data exists in `database/`.
 4. Ensure test users are available:
-   - `STANDARD_USER_A` — regular account with permission to log in and create playlists
-   - `STANDARD_USER_B` — regular account with at least one saved rating for profile verification
-   - `ADMIN_USER` — admin-capable account for admin workflows
+   - `demo` — regular account with permission to log in and create playlists
+   - `nostalgia` — regular account with at least one saved rating for profile verification
+   - `admin` — admin-capable account for admin workflows
 5. If a test creates temporary data, clean it up at the end of the test or reseed the local data before the next run.
 
 ## System Test Matrix
@@ -49,17 +49,17 @@ Before running the system tests:
 | Test ID  | Scenario | Test Approach   | Preconditions | Steps | Expected Outcome | Assigned Team Member |
 |----------|---|-----------------|---|---|---|---|
 | ST-01-OB | New user sign-up and automatic session start | Opaque Box      | Frontend/backend running; chosen username does not already exist | Open `/signup`; enter a unique username and password with 6+ characters; submit; allow redirect to the shelf; open `/account` | Account is created, the user is logged in immediately, the shelf loads, and the account page shows the new user identity | Darius Kallistas |
-| ST-02-OB | Existing user login and protected page access | Opaque Box      | `STANDARD_USER_A` exists and is logged out | Open `/login`; enter valid credentials; submit; open `/playlists`; open `/account` | Login succeeds, protected pages load without redirect loops, and user-specific data is shown | Brandon Dias |
+| ST-02-OB | Existing user login and protected page access | Opaque Box      | `demo` exists and is logged out | Open `/login`; enter valid credentials; submit; open `/playlists`; open `/account` | Login succeeds, protected pages load without redirect loops, and user-specific data is shown | Brandon Dias |
 | ST-03-OB | Browse the shelf and inspect album details | Opaque Box      | Seeded albums and songs exist | Open `/`; browse/select an album in the shelf; verify title, artist, year/genre tags, and track list; open lyrics for one track | Shelf view loads catalog data and the selected album shows full detail with its songs | Thanh Long Le |
 | ST-04-OB | Search albums and songs, then jump into the shelf | Opaque Box      | Seeded albums and songs exist | Open `/search`; enter a query matching known catalog data; verify album results; switch to song mode; verify song results; click one result | Search returns matching results and clicking a result opens the shelf focused on that album/song | Daniyal |
-| ST-05-CB | Rate an album and verify the rating is persisted | Clear Box       | `STANDARD_USER_A` is logged in; selected album exists | On `/`, open an album; choose a star rating; confirm save feedback; open `/account`; open `/profile/<STANDARD_USER_A>` | Rating is saved, account history updates, and the public profile shows the rated album and updated rating count | Epicfunguyddan |
-| ST-06-OB | Create a custom playlist from the playlists page | Opaque Box      | `STANDARD_USER_A` is logged in | Open `/playlists`; create a playlist with name and description; save; open the new playlist | Playlist is created with category `Custom`, appears in the list, and opens with zero songs initially | Darius Kallistas |
-| ST-07-TB | Add a single song to a playlist from the shelf | Translucent Box | `STANDARD_USER_A` is logged in and has at least one playlist | Open `/`; select an album; in the track list click `Add` on one song; choose a playlist in the modal; confirm; open that playlist detail page | The chosen song is added to the playlist and the playlist song count increases by exactly one | Brandon Dias |
-| ST-08-TB | Add an album's songs to a playlist | Translucent Box | `STANDARD_USER_A` is logged in and has at least one playlist | Open `/`; select an album; click `+ Add Album Songs to Playlist`; choose a playlist; confirm; open playlist detail | All songs from the selected album are added and the playlist shows multiple tracks from that album | Thanh Long Le |
-| ST-09-OB | Maintain playlist contents and delete the playlist | Opaque Box      | `STANDARD_USER_A` is logged in and has a populated playlist | Open `/playlists/<id>`; remove one song; verify updated count; return to `/playlists`; delete the playlist; confirm prompt | Removed song no longer appears, song count decreases, and deleted playlist disappears from the list | Daniyal |
-| ST-10-OB | Look up another user and open their public profile | Opaque Box      | `STANDARD_USER_A` and `STANDARD_USER_B` exist; `STANDARD_USER_A` is logged in | Open `/account`; search for `STANDARD_USER_B` in Lookup Users; verify result row; navigate to `/profile/<STANDARD_USER_B>` | Lookup returns the matching user and the public profile loads their display name, admin badge if applicable, bio, and rated albums | Epicfunguyddan |
+| ST-05-CB | Rate an album and verify the rating is persisted | Clear Box       | `demo` is logged in; selected album exists | On `/`, open an album; choose a star rating; confirm save feedback; open `/account`; open `/profile/<demo>` | Rating is saved, account history updates, and the public profile shows the rated album and updated rating count | Danyal |
+| ST-06-OB | Create a custom playlist from the playlists page | Opaque Box      | `demo` is logged in | Open `/playlists`; create a playlist with name and description; save; open the new playlist | Playlist is created with category `Custom`, appears in the list, and opens with zero songs initially | Darius Kallistas |
+| ST-07-TB | Add a single song to a playlist from the shelf | Translucent Box | `demo` is logged in and has at least one playlist | Open `/`; select an album; in the track list click `Add` on one song; choose a playlist in the modal; confirm; open that playlist detail page | The chosen song is added to the playlist and the playlist song count increases by exactly one | Brandon Dias |
+| ST-08-TB | Add an album's songs to a playlist | Translucent Box | `demo` is logged in and has at least one playlist | Open `/`; select an album; click `+ Add Album Songs to Playlist`; choose a playlist; confirm; open playlist detail | All songs from the selected album are added and the playlist shows multiple tracks from that album | Thanh Long Le |
+| ST-09-OB | Maintain playlist contents and delete the playlist | Opaque Box      | `demo` is logged in and has a populated playlist | Open `/playlists/<id>`; remove one song; verify updated count; return to `/playlists`; delete the playlist; confirm prompt | Removed song no longer appears, song count decreases, and deleted playlist disappears from the list | Daniyal |
+| ST-10-OB | Look up another user and open their public profile | Opaque Box      | `demo` and `nostalgia` exist; `demo` is logged in | Open `/account`; search for `nostalgia` in Lookup Users; verify result row; navigate to `/profile/<nostalgia>` | Lookup returns the matching user and the public profile loads their display name, admin badge if applicable, bio, and rated albums | Danyal |
 | ST-11-TB | Promote a standard user to admin from the account page | Translucent Box | Logged in as a non-admin account; valid promotion code is available | Open `/account`; enter the promotion code; submit; wait for refresh | Account now shows admin status and the Admin User Management panel becomes available | Darius Kallistas |
-| ST-12-CB | Admin creates and manages users end to end | Clear Box       | Logged in as `ADMIN_USER` or a newly promoted admin | Open `/account`; create a user; verify it appears in the admin list; reset that user's password; disable or enable the user; optionally soft delete it | Admin actions succeed, confirmation messages appear, and the user list reflects the updated role/status/deletion state | Brandon Dias |
+| ST-12-CB | Admin creates and manages users end to end | Clear Box       | Logged in as `admin` or a newly promoted admin | Open `/account`; create a user; verify it appears in the admin list; reset that user's password; disable or enable the user; optionally soft delete it | Admin actions succeed, confirmation messages appear, and the user list reflects the updated role/status/deletion state | Brandon Dias |
 
 ## Detailed Test Procedures
 
@@ -92,12 +92,12 @@ Before running the system tests:
 **Assigned Team Member:** Brandon Dias
 
 **Preconditions**
-- `STANDARD_USER_A` exists.
+- `demo` exists.
 - The browser is in a logged-out state.
 
 **Steps**
 1. Open `http://localhost:3000/login`.
-2. Sign in using `STANDARD_USER_A` credentials.
+2. Sign in using `demo` credentials.
 3. After redirect, open `/playlists`.
 4. Open `/account`.
 
@@ -155,10 +155,10 @@ Before running the system tests:
 
 ### ST-05-CB — Rate an album and verify persistence
 **Test Approach:** Clear Box — tester knows that a rating saved on the shelf should be persisted to the backend and must appear in both the account history and the public profile page.  
-**Assigned Team Member:** Epicfunguyddan
+**Assigned Team Member:** Danyal
 
 **Preconditions**
-- `STANDARD_USER_A` is logged in.
+- `demo` is logged in.
 - The selected album exists and is visible on the shelf.
 
 **Steps**
@@ -167,7 +167,7 @@ Before running the system tests:
 3. Click a star value in `Your Rating`.
 4. Wait for the `✓ Saved!` confirmation.
 5. Open `/account` and review recent history.
-6. Open `http://localhost:3000/profile/<STANDARD_USER_A>`.
+6. Open `http://localhost:3000/profile/<demo>`.
 
 **Expected Outcome**
 - The rating is saved successfully.
@@ -181,7 +181,7 @@ Before running the system tests:
 **Assigned Team Member:** Darius Kallistas
 
 **Preconditions**
-- `STANDARD_USER_A` is logged in.
+- `demo` is logged in.
 
 **Steps**
 1. Open `/playlists`.
@@ -202,7 +202,7 @@ Before running the system tests:
 **Assigned Team Member:** Brandon Dias
 
 **Preconditions**
-- `STANDARD_USER_A` is logged in.
+- `demo` is logged in.
 - At least one playlist already exists.
 
 **Steps**
@@ -226,7 +226,7 @@ Before running the system tests:
 **Assigned Team Member:** Thanh Long Le
 
 **Preconditions**
-- `STANDARD_USER_A` is logged in.
+- `demo` is logged in.
 - At least one playlist already exists.
 
 **Steps**
@@ -249,7 +249,7 @@ Before running the system tests:
 **Assigned Team Member:** Daniyal
 
 **Preconditions**
-- `STANDARD_USER_A` is logged in.
+- `demo` is logged in.
 - A playlist exists with at least one song.
 
 **Steps**
@@ -268,18 +268,18 @@ Before running the system tests:
 
 ### ST-10-OB — Look up another user and open their public profile
 **Test Approach:** Opaque Box — driven entirely through the UI with no knowledge of backend internals.  
-**Assigned Team Member:** Epicfunguyddan
+**Assigned Team Member:** Danyal
 
 **Preconditions**
-- `STANDARD_USER_A` and `STANDARD_USER_B` exist.
-- `STANDARD_USER_A` is logged in.
-- `STANDARD_USER_B` has profile data and at least one saved rating.
+- `demo` and `nostalgia` exist.
+- `demo` is logged in.
+- `nostalgia` has profile data and at least one saved rating.
 
 **Steps**
 1. Open `/account`.
-2. Search for `STANDARD_USER_B` in the lookup field.
+2. Search for `nostalgia` in the lookup field.
 3. Verify the result row appears.
-4. Navigate to `/profile/<STANDARD_USER_B>`.
+4. Navigate to `/profile/<nostalgia>`.
 
 **Expected Outcome**
 - Lookup returns the expected user.
@@ -314,7 +314,7 @@ Before running the system tests:
 **Assigned Team Member:** Brandon Dias
 
 **Preconditions**
-- Logged in as `ADMIN_USER` or a user promoted in ST-11-TB.
+- Logged in as `admin` or a user promoted in ST-11-TB.
 
 **Steps**
 1. Open `/account`.

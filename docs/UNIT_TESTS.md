@@ -14,15 +14,15 @@ All tests listed here are **Clear Box (CB)** — each test directly instantiates
 | UT-01-CB | `JwtHelper.createToken()` + `getUsernameFromToken()` | `"demo-user"` | Decoded username equals `"demo-user"` | Automated (JUnit) | Brandon Dias |
 | UT-02-CB | `JwtHelper.getUsernameFromToken()` | `"not-a-real-jwt"` | Returns `null` | Automated (JUnit) | Brandon Dias |
 | UT-03-CB | `AuthController.signup()` | `{username: "newuser", password: "123"}` | HTTP `400 Bad Request`, non-null body | Automated (JUnit) | Darius Kallistas |
-| UT-04-CB | `RatingController.rateAlbum()` | `albumId=1`, `{stars: 6}`, `principal=null` | HTTP `400 Bad Request` | Automated (JUnit) | Epicfunguyddan |
+| UT-04-CB | `RatingController.rateAlbum()` | `albumId=1`, `{stars: 6}`, `principal=null` | HTTP `400 Bad Request` | Automated (JUnit) | Danyal |
 | UT-05-CB | `AlbumController.search()` | `"   "` (whitespace only) | `meta.albumCount == 0`, `meta.songCount == 0` | Automated (JUnit) | Daniyal |
-| UT-06-CB | `ProfileController.getProfile()` | `username="demo"`, mocked user row + 2 ratings | HTTP `200 OK`, `username="demo"`, `ratingCount=2` | Automated (JUnit) | Epicfunguyddan |
+| UT-06-CB | `ProfileController.getProfile()` | `username="demo"`, mocked user row + 2 ratings | HTTP `200 OK`, `username="demo"`, `ratingCount=2` | Automated (JUnit) | Danyal |
 | UT-07-CB | `AlbumController.getOneAlbum()` | `albumId=4`, mocked album + 2 songs | HTTP `200 OK`, body contains `"songs"` key | Automated (JUnit) | Thanh Long Le |
 | UT-08-CB | `PlaylistController.createPlaylist()` | `{name: "Road Trip", description: "Driving mix"}`, `principal="demo"` | HTTP `201 Created`, `id=501`, `category="Custom"` | Automated (JUnit) | Darius Kallistas |
 | UT-09-CB | `AlbumController.getAllSongs()` | Mocked DB returning 1 song `{id:1, title:"Seed Song"}` | List size `1`, `title="Seed Song"` | Automated (JUnit) | Thanh Long Le |
 | UT-10-CB | `AdminController.setRole()` | `username="targetUser"`, `{isAdmin: true}`, admin `principal` | HTTP `200 OK`, `username="targetUser"`, `isAdmin=true` | Automated (JUnit) | Brandon Dias |
 | UT-11-CB | `fail()` — friends profile discovery stub | N/A (TDD red phase) | Test fails with `EL-15 TODO` message | Automated (JUnit) | Daniyal |
-| UT-12-CB | `fail()` — song listen count/duration stub | N/A (TDD red phase) | Test fails with `EL-5 TODO` message | Automated (JUnit) | Epicfunguyddan |
+| UT-12-CB | `fail()` — song listen count/duration stub | N/A (TDD red phase) | Test fails with `EL-5 TODO` message | Automated (JUnit) | Danyal |
 | UT-13-CB | `fail()` — sort profiles by genre stub | N/A (TDD red phase) | Test fails with `EL-16 TODO` message | Automated (JUnit) | Daniyal |
 | UT-14-CB | `fail()` — comments feature stub | N/A (TDD red phase) | Test fails with `EL-20 TODO` message | Automated (JUnit) | Thanh Long Le |
 
@@ -94,7 +94,7 @@ All tests listed here are **Clear Box (CB)** — each test directly instantiates
 **File:** `Iteration1DoneColumnTest.java`  
 **Story:** EL-14 — Star ratings  
 **Test Approach:** Clear Box — directly instantiates `RatingController`, injects a mocked `Database`, and calls `rateAlbum()`.  
-**Assigned Team Member:** Epicfunguyddan
+**Assigned Team Member:** Danyal
 
 **Method Under Test:** `RatingController.rateAlbum()`
 
@@ -138,7 +138,7 @@ All tests listed here are **Clear Box (CB)** — each test directly instantiates
 **File:** `Iteration1DoneColumnTest.java`  
 **Story:** EL-24 — View User Profile Page  
 **Test Approach:** Clear Box — directly instantiates `ProfileController`, injects a mocked `Database` returning a known user row and rating list.  
-**Assigned Team Member:** Epicfunguyddan
+**Assigned Team Member:** Danyal
 
 **Method Under Test:** `ProfileController.getProfile()`
 
@@ -274,7 +274,7 @@ All tests listed here are **Clear Box (CB)** — each test directly instantiates
 **File:** `Iteration3ToDoColumnRedDemo.java`  
 **Story:** EL-5 — Number/total time of song listens  
 **Test Approach:** Clear Box — explicit `fail()` stub.  
-**Assigned Team Member:** Epicfunguyddan
+**Assigned Team Member:** Danyal
 
 **Method Under Test:** N/A (not yet implemented)
 

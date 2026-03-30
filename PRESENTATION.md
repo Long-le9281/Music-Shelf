@@ -117,7 +117,7 @@ Commit history
 ```
 10  Darius Kallistas
  8  Brandon Dias
- 6  Epicfunguyddan
+ 6  Danyal
  5  Daniyal
  6  Thanh Long Le
 ```
