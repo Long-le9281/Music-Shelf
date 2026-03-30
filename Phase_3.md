@@ -1,10 +1,10 @@
-# 🎵 Elgooners Record Shelf
+#  Elgooners Record Shelf
 
 ---
 
 ---
 
-# 📋 Agenda
+#  Agenda
 
 1. Project Overview
 2. Build Files & New Developer Setup
@@ -24,7 +24,7 @@
 
 ---
 
-# 🏗️ 1. Project Overview
+# 1. Project Overview
 
 **Elgooners Record Shelf** — A full-stack music cataloguing app
 
@@ -44,67 +44,10 @@
 - Custom playlists
 - Admin user management
 
----
-
-
-https://github.com/user-attachments/assets/998a86f3-70bc-4cc8-b7a1-8060b81c6cdc
-
 
 ---
 
-# 🔧 2. Build Files & New Developer Setup
-
-## Build Configuration Files
-
-| File | Purpose |
-|------|---------|
-| `backend/pom.xml` | Maven — all Java dependencies + Spring Boot plugin |
-| `frontend/package.json` | npm — React + Router + scripts |
-| `backend/src/main/resources/application.properties` | Server port, DB path |
-
----
-
-## Step 1 — Initialize Maven Project
-
-Open IntelliJ IDEA:
-
-```
-File → Open → select the backend/ folder
-```
-
-IntelliJ detects `backend/pom.xml` and downloads all dependencies automatically (~1 min first time).
-
----
-
-## Step 2 — Run the Backend
-
-Open `backend/src/main/java/com/elgooners/app/App.java`
-
-→ Click the **green play button** next to `main`
-
-→ Console shows: `Started App in X seconds`
-
-→ Backend live at: **http://localhost:8080**
-
----
-
-## Step 3 — Run the Frontend
-
-Open a new terminal:
-
-```bash
-cd frontend
-npm install       # first time only
-npm start
-```
-
-→ App opens automatically at: **http://localhost:3000**
-
----
-
----
-
-# 🌿 3. Version Control System
+# 3. Version Control System
 
 ## All Members Have Check-ins
 
@@ -202,7 +145,7 @@ mvn -Dtest=Iteration3ToDoColumnRedDemo test
 
 ---
 
-# ✅ 5. Unit Test Deliverables
+#  5. Unit Test Deliverables
 
 ## Test Files
 
@@ -215,7 +158,7 @@ mvn -Dtest=Iteration3ToDoColumnRedDemo test
 
 ---
 
-## 🟢 Iteration 1 — Done Column Tests
+##  Iteration 1 — Done Column Tests
 
 
 ```
@@ -229,11 +172,11 @@ mvn -Dtest=Iteration3ToDoColumnRedDemo test
          profile endpoint returns user info and ratings
 ```
 
-**4 / 4 PASSED** ✅
+**4 / 4 PASSED** 
 
 ---
 
-## 🟢 Iteration 2 — In Progress Column Tests
+##  Iteration 2 — In Progress Column Tests
 
 
 ```
@@ -247,11 +190,11 @@ mvn -Dtest=Iteration3ToDoColumnRedDemo test
          admin can update a target user's role                   3 ms
 ```
 
-**4 / 4 PASSED** ✅
+**4 / 4 PASSED** 
 
 ---
 
-## 🔴 Iteration 3 — To-Do Column (Red Phase)
+##  Iteration 3 — To-Do Column (Red Phase)
 
 
 
@@ -262,13 +205,13 @@ mvn -Dtest=Iteration3ToDoColumnRedDemo test
 ✘ EL-5   Number/total time of song listens is not implemented yet
 ```
 
-**0 / 4 PASSED** 🔴 — Intentional TDD red phase
+**0 / 4 PASSED**  — Intentional TDD red phase
 
 ---
 
 ---
 
-# 🔗 6. Integration Testing Plan
+# 6. Integration Testing Plan
 
 Integration testing validates interactions between controllers, persistence, auth/security context, and API contracts.
 
@@ -290,7 +233,7 @@ Integration testing validates interactions between controllers, persistence, aut
 
 ---
 
-# 🧪 7. System Testing Plan
+# 7. System Testing Plan
 
 System tests cover full end-to-end workflows from React UI to Spring Boot API to SQLite persistence.
 
@@ -310,7 +253,7 @@ System tests cover full end-to-end workflows from React UI to Spring Boot API to
 
 ---
 
-# 🧭 8. Coverage Strategy (Opaque / Clear / Translucent)
+# 8. Coverage Strategy (Opaque / Clear / Translucent)
 
 This project deliberately mixes all three testing views to maximize confidence while staying practical.
 
@@ -337,8 +280,7 @@ This project deliberately mixes all three testing views to maximize confidence w
 ---
 
 ---
-
-# 📌 9. Task Board (Updated)
+# 9. Task Board (Updated)
 
 <img width="1072" height="905" alt="Updated burn-down" src="https://github.com/user-attachments/assets/d0345a48-0dc7-48e5-8aab-97369b19593b" />
 
@@ -347,7 +289,7 @@ This project deliberately mixes all three testing views to maximize confidence w
 
 ---
 
-# 📉 10. Burndown Chart & Velocity
+# 10. Burndown Chart & Velocity
 
 ## Iteration 2 Burndown
 
@@ -360,12 +302,8 @@ This project deliberately mixes all three testing views to maximize confidence w
 
 Velocity = (3.5 tasks) / 4 total  =  0.87 for sprint 2
 
-# 🐛 11. Interesting Bugs Found
 
----
-
-
-# 💡 12. Testing Observations
+# 11. Testing Observations
 
 ---
 
@@ -386,7 +324,7 @@ Velocity = (3.5 tasks) / 4 total  =  0.87 for sprint 2
 ---
 
 
-## 13. Summary, Remaining Gaps, and Submission Sync
+## 12. Summary, Remaining Gaps, and Submission Sync
 
 | Rubric Item | Status |
 |------------|--------|
