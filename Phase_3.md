@@ -105,7 +105,7 @@ git log --all --graph --oneline --decorate -n 20
 
 ---
 
-# 🔴 4. Test-Driven Development (TDD)
+# 🔴 4. Test-Driven Development (TDD) (Further documentation can be found in the docs folder)
 
 ## The Process We Followed
 
