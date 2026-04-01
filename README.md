@@ -61,6 +61,36 @@ npm start
 - Backend URL: `http://localhost:8080`
 - Frontend URL: `http://localhost:3000`
 
+## Easy Windows Launch
+For a simple end-user launch from the repo root, double-click `run.bat` or run:
+
+```powershell
+.\run.bat
+```
+
+What it does:
+- builds a packaged frontend + backend jar the first time it is needed
+- starts the app at `http://localhost:8080`
+- reuses the packaged jar on later launches for faster startup
+
+Helpful variants:
+
+```powershell
+.\run.bat rebuild
+.\stop.bat
+.\run.bat dev
+```
+
+- `rebuild` forces a fresh frontend build and backend jar package
+- `stop.bat` stops the packaged app started by `run.bat`
+- `dev` keeps the developer workflow intact by opening separate backend and frontend terminals
+
+Packaged jar location after the first build:
+
+```text
+backend\target\recordshelf.jar
+```
+
 ## Unit Testing
 All tests are in `backend/src/test/java/com/elgooners/app/`.
 

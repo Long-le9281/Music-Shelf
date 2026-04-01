@@ -43,6 +43,26 @@ Open:
 - Frontend: `http://localhost:3000`
 - Backend API: `http://localhost:8080`
 
+## 4B) Easy Windows Launcher
+If you want a simpler end-user style launch from the repo root, use:
+
+```powershell
+.\run.bat
+```
+
+Optional commands:
+
+```powershell
+.\run.bat rebuild
+.\stop.bat
+.\run.bat dev
+```
+
+- `run.bat` starts the packaged app on `http://localhost:8080`
+- `run.bat rebuild` rebuilds the frontend bundle and backend jar first
+- `stop.bat` stops the packaged app started by the launcher
+- `run.bat dev` opens separate backend/frontend terminals for developers
+
 ## 5) Unit Testing
 All test files are under `backend/src/test/java/com/elgooners/app/`.
 

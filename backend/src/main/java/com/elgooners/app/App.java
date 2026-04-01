@@ -80,6 +80,7 @@ import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Controller;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -1652,6 +1653,25 @@ class SecurityConfig {
             .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // Packaged frontend files and client-side routes
+                .requestMatchers(HttpMethod.GET,
+                    "/",
+                    "/index.html",
+                    "/asset-manifest.json",
+                    "/favicon.ico",
+                    "/manifest.json",
+                    "/robots.txt",
+                    "/logo192.png",
+                    "/logo512.png",
+                    "/static/**",
+                    "/search",
+                    "/playlists",
+                    "/playlists/*",
+                    "/account",
+                    "/profile/*",
+                    "/signup",
+                    "/login"
+                ).permitAll()
                 // These endpoints anyone can access (no login needed)
                 .requestMatchers(HttpMethod.POST, "/api/auth/signup", "/api/auth/login").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/albums/**").permitAll()
@@ -2339,3 +2359,22 @@ class AdminController {
         return out.toString();
     }
 }
+
+@Controller
+class FrontendController {
+
+    @GetMapping({
+        "/",
+        "/search",
+        "/playlists",
+        "/playlists/{id}",
+        "/account",
+        "/profile/{username}",
+        "/signup",
+        "/login"
+    })
+    public String forwardSpaRoutes() {
+        return "forward:/index.html";
+    }
+}
+

@@ -30,10 +30,12 @@ document.head.appendChild(link);
 // ============================================================
 // 1. API FUNCTIONS
 // All calls to the backend go through these functions.
-// Change BASE_URL if your backend runs on a different port.
+// Use a relative API path so the app works in both modes:
+//   - developer mode: React dev server proxies /api -> localhost:8080
+//   - packaged mode: Spring Boot serves the built frontend and /api together
 // ============================================================
 
-const BASE_URL = "http://localhost:8080/api";
+const BASE_URL = (process.env.REACT_APP_API_BASE_URL || "/api").replace(/\/$/, "");
 
 // Makes a request to the backend. Attaches the login token if one exists.
 async function callApi(path, options = {}) {
