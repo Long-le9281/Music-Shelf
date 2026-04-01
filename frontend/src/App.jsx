@@ -1737,6 +1737,8 @@ function ProfilePage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    const [selectedGenre, setSelectedGenre] = useState("All");
+
     useEffect(() => {
         apiGet("/profile/" + username)
             .then(data => setProfile(data))
@@ -1746,6 +1748,19 @@ function ProfilePage() {
 
     if (loading) return <div className="page loading">Loading profile...</div>;
     if (error || !profile) return <div className="page empty">Profile not found.</div>;
+
+    const genres = ["All", ...new Set(profile.ratings.map(r => r.genre).filter(Boolean))];
+
+    function cycleGenre() {
+        const currentIndex = genres.indexOf(selectedGenre);
+        const nextIndex = (currentIndex + 1) % genres.length;
+        setSelectedGenre(genres[nextIndex]);
+    }
+
+    const filteredRatings =
+        selectedGenre === "All"
+            ? profile.ratings
+            : profile.ratings.filter(r => r.genre === selectedGenre);
 
     return (
         <div className="page profile-page">
@@ -1762,13 +1777,20 @@ function ProfilePage() {
                 </div>
             </div>
 
-            <div className="section-title" style={{ marginBottom: "1rem" }}>Rated Albums</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                <div className="section-title">
+                    Rated Albums {selectedGenre !== "All" ? `: ${selectedGenre}` : ""}
+                </div>
+                <button onClick={cycleGenre} style={{ cursor: "pointer" }}>
+                    Filter Genre
+                </button>
+            </div>
 
-            {profile.ratings.length === 0 && (
+            {filteredRatings.length === 0 && (
                 <div className="empty">No ratings yet.</div>
             )}
 
-            {profile.ratings.map((r, i) => (
+            {filteredRatings.map((r, i) => (
                 <div key={i} className="rating-row">
                     <div className="rating-art" style={{ background: `linear-gradient(135deg, ${r.color1}, ${r.color2})` }} />
                     <div>

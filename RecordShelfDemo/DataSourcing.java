@@ -169,11 +169,11 @@ public class DataSourcing {
         try {
             if (!Files.exists(ALBUMS_CSV)) {
                 Files.createDirectories(ALBUMS_CSV.getParent());
-                Files.write(ALBUMS_CSV, Collections.singletonList("artist,album_title,year,track_count,art_url"));
+                Files.write(ALBUMS_CSV, Collections.singletonList("artist,album_title,year,track_count,art_url,genre"));
             }
             if (!Files.exists(SONGS_CSV)) {
                 Files.createDirectories(SONGS_CSV.getParent());
-                Files.write(SONGS_CSV, Collections.singletonList("artist,album_title,year,track_number,song_title,duration_seconds"));
+                Files.write(SONGS_CSV, Collections.singletonList("artist,album_title,year,track_number,song_title,duration_seconds,genre"));
             }
         } catch (Exception e) {
             throw new RuntimeException("Unable to create CSV files", e);
@@ -217,7 +217,7 @@ public class DataSourcing {
                 if (existingAlbumKeys.contains(key) || !batch.add(key)) {
                     continue;
                 }
-                out.println(csvRow(t.artist, t.albumTitle, String.valueOf(t.year), "0", t.artUrl));
+                out.println(csvRow(t.artist, t.albumTitle, String.valueOf(t.year), "0", t.artUrl, t.genre));
                 existingAlbumKeys.add(key);
                 added++;
             }
@@ -242,7 +242,8 @@ public class DataSourcing {
                         String.valueOf(t.year),
                         String.valueOf(t.trackNumber),
                         t.songTitle,
-                        String.valueOf(t.durationSeconds)
+                        String.valueOf(t.durationSeconds),
+                        t.genre
                 ));
                 existingSongKeys.add(key);
                 added++;
