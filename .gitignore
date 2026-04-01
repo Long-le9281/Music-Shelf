@@ -1,0 +1,16 @@
+# IDE files
+.idea/
+*.iml
+# Java build output
+target/
+backend/target/
+# Node dependencies and caches
+frontend/node_modules/
+frontend/node_modules/.cache/
+frontend/build/
+# Python cache
+__pycache__/
+*.pyc
+# Runtime database artifacts
+database/recordshelf.db
+database/*.db

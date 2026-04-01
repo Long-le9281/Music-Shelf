@@ -1,0 +1,26 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Run Record Shelf (UI)",
+            "request": "launch",
+            "mainClass": "RecordShelfDemo",
+            "projectName": "RecordShelfDemo",
+            "cwd": "${workspaceFolder}/RecordShelfDemo"
+        },
+        {
+            "type": "java",
+            "name": "Run DataSourcing (populate DB)",
+            "request": "launch",
+            "mainClass": "DataSourcing",
+            "projectName": "RecordShelfDemo",
+            "cwd": "${workspaceFolder}/RecordShelfDemo",
+            "args": ["rock", "20"],
+            "env": {
+                "SPOTIFY_CLIENT_ID": "a7df04b3f2eb4138bdf8cdff694d751c",
+                "SPOTIFY_CLIENT_SECRET": "ead68b52ec99469d9672d4b1b586e242"
+            }
+        }
+    ]
+}
