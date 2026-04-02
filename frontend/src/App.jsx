@@ -520,6 +520,61 @@ const css = `
         background: #fff;
     }
 
+    /* --- Navbar User Search --- */
+    .navbar-search { position: relative; margin: 0 0.25rem; }
+    .navbar-search-input {
+        padding: 0.32rem 0.75rem;
+        border-radius: 20px;
+        border: 1px solid rgba(245,241,237,0.2);
+        background: rgba(255,255,255,0.1);
+        color: #f5f1ed;
+        font-size: 0.73rem;
+        font-family: inherit;
+        width: 150px;
+        outline: none;
+        transition: all 0.2s;
+    }
+    .navbar-search-input::placeholder { color: rgba(245,241,237,0.38); }
+    .navbar-search-input:focus {
+        background: rgba(255,255,255,0.17);
+        border-color: rgba(245,241,237,0.45);
+        width: 190px;
+    }
+    .navbar-search-dropdown {
+        position: absolute;
+        top: calc(100% + 10px);
+        left: 0;
+        min-width: 230px;
+        background: #2c2420;
+        border: 1px solid #8b7355;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+        z-index: 200;
+        overflow: hidden;
+    }
+    .navbar-search-result {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        padding: 0.6rem 0.9rem;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+    .navbar-search-result:hover { background: rgba(139,115,85,0.28); }
+    .navbar-search-avatar {
+        width: 28px; height: 28px;
+        border-radius: 50%;
+        border: 2px solid #8b7355;
+        display: flex; align-items: center; justify-content: center;
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 0.9rem;
+        color: #f5f1ed;
+        flex-shrink: 0;
+    }
+    .navbar-search-name { font-size: 0.82rem; font-weight: 600; color: #f5f1ed; }
+    .navbar-search-sub { font-size: 0.67rem; color: rgba(245,241,237,0.48); margin-top: 1px; }
+    .navbar-search-empty { padding: 0.7rem 0.9rem; font-size: 0.78rem; color: rgba(245,241,237,0.45); }
+
     @media (max-width: 980px) {
         .detail-top { flex-direction: column; }
         .track-lyrics-layout { grid-template-columns: 1fr; }
@@ -537,6 +592,75 @@ function GlobalStyles() {
     return null;
 }
 
+// --- Navbar User Search ---
+function NavbarUserSearch() {
+    const [query, setQuery] = useState("");
+    const [results, setResults] = useState([]);
+    const [open, setOpen] = useState(false);
+    const [noResults, setNoResults] = useState(false);
+    const ref = useRef(null);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        function handleClick(e) {
+            if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+        }
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
+    }, []);
+
+    useEffect(() => {
+        if (!query.trim()) { setResults([]); setOpen(false); setNoResults(false); return; }
+        const timer = setTimeout(() => {
+            apiGet("/users/lookup?q=" + encodeURIComponent(query))
+                .then(data => {
+                    const users = data.users || [];
+                    setResults(users);
+                    setNoResults(users.length === 0);
+                    setOpen(true);
+                })
+                .catch(() => {});
+        }, 250);
+        return () => clearTimeout(timer);
+    }, [query]);
+
+    function goToProfile(username) {
+        setQuery("");
+        setResults([]);
+        setOpen(false);
+        setNoResults(false);
+        navigate("/profile/" + username);
+    }
+
+    return (
+        <div className="navbar-search" ref={ref}>
+            <input
+                className="navbar-search-input"
+                placeholder="Find a user…"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                onFocus={() => (results.length > 0 || noResults) && setOpen(true)}
+            />
+            {open && (
+                <div className="navbar-search-dropdown">
+                    {results.map(u => (
+                        <div key={u.username} className="navbar-search-result" onClick={() => goToProfile(u.username)}>
+                            <div className="navbar-search-avatar" style={{ background: u.avatarColor }}>
+                                {(u.displayName || u.username)[0].toUpperCase()}
+                            </div>
+                            <div>
+                                <div className="navbar-search-name">{u.displayName || u.username}</div>
+                                <div className="navbar-search-sub">@{u.username} · {u.ratingCount} ratings</div>
+                            </div>
+                        </div>
+                    ))}
+                    {noResults && <div className="navbar-search-empty">No users found</div>}
+                </div>
+            )}
+        </div>
+    );
+}
+
 // --- Navbar ---
 function Navbar() {
     const { user, logout } = useAuth();
@@ -549,6 +673,7 @@ function Navbar() {
                 <Link to="/">Shelf</Link>
                 <Link to="/search">Search</Link>
                 {user && <Link to="/playlists">Playlists</Link>}
+                <NavbarUserSearch />
                 {user ? (
                     <>
                         <Link to="/account">Account</Link>
@@ -1731,8 +1856,59 @@ function PlaylistDetailPage() {
 }
 
 // --- Profile Page ---
+function PublicPlaylistPage() {
+    const { username, id } = useParams();
+    const navigate = useNavigate();
+    const [playlist, setPlaylist] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        apiGet(`/profile/${username}/playlists/${id}`)
+            .then(data => setPlaylist(data))
+            .catch(() => {})
+            .finally(() => setLoading(false));
+    }, [username, id]);
+
+    if (loading) return <div className="page loading">Loading playlist...</div>;
+    if (!playlist) return <div className="page empty">Playlist not found.</div>;
+
+    return (
+        <div className="page playlist-detail-page">
+            <div className="playlist-back" onClick={() => navigate("/profile/" + username)}>← Back to @{username}</div>
+            <div className="playlist-detail-title">{playlist.name}</div>
+            {playlist.description && <p style={{ marginTop: "0.6rem", color: "rgba(44,36,32,0.65)" }}>{playlist.description}</p>}
+            <div className="playlist-detail-info" style={{ marginTop: "0.7rem" }}>
+                <span className="playlist-card-category" style={{ marginRight: "0.6rem" }}>{playlist.category}</span>
+                <span>{playlist.songs.length} {playlist.songs.length === 1 ? "song" : "songs"}</span>
+            </div>
+            <div style={{ marginTop: "1.5rem" }}>
+                {playlist.songs.length === 0 ? (
+                    <div className="empty">No songs in this playlist yet.</div>
+                ) : (
+                    <>
+                        <div className="section-title">Songs</div>
+                        {playlist.songs.map((song, idx) => (
+                            <div key={`${song.id}-${idx}`} className="track">
+                                <span className="track-num">{idx + 1}</span>
+                                <div style={{ flex: 1 }}>
+                                    <div className="track-title">{song.title}</div>
+                                    <div style={{ fontSize: "0.74rem", color: "rgba(44,36,32,0.55)", marginTop: "2px" }}>
+                                        {song.albumTitle} - {song.artist}
+                                    </div>
+                                </div>
+                                <span className="track-dur">{formatTime(song.durationSeconds)}</span>
+                            </div>
+                        ))}
+                    </>
+                )}
+            </div>
+        </div>
+    );
+}
+
 function ProfilePage() {
     const { username } = useParams();
+    const navigate = useNavigate();
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -1746,6 +1922,8 @@ function ProfilePage() {
 
     if (loading) return <div className="page loading">Loading profile...</div>;
     if (error || !profile) return <div className="page empty">Profile not found.</div>;
+
+    const topSongs = (profile.songRatings || []).filter(s => s.stars >= 4);
 
     return (
         <div className="page profile-page">
@@ -1762,7 +1940,47 @@ function ProfilePage() {
                 </div>
             </div>
 
-            <div className="section-title" style={{ marginBottom: "1rem" }}>Rated Albums</div>
+            {/* Highest-Rated Songs */}
+            {topSongs.length > 0 && (
+                <>
+                    <div className="section-title" style={{ marginBottom: "1rem", marginTop: "1.5rem" }}>Highest-Rated Songs</div>
+                    {topSongs.map((s, i) => (
+                        <div key={i} className="rating-row">
+                            <div className="rating-art" style={{
+                                background: s.albumArtUrl
+                                    ? `center/cover no-repeat url(${s.albumArtUrl})`
+                                    : `linear-gradient(135deg, ${s.color1}, ${s.color2})`
+                            }} />
+                            <div>
+                                <div className="rating-album-title">{s.title}</div>
+                                <div className="rating-album-artist">{s.artist} · {s.albumTitle}</div>
+                            </div>
+                            <div className="rating-stars">{"★".repeat(s.stars)}</div>
+                        </div>
+                    ))}
+                </>
+            )}
+
+            {/* Playlists */}
+            {(profile.playlists || []).length > 0 && (
+                <>
+                    <div className="section-title" style={{ marginBottom: "1rem", marginTop: "1.5rem" }}>Playlists</div>
+                    {profile.playlists.map(p => (
+                        <div key={p.id} className="playlist-card" style={{ cursor: "pointer" }}
+                            onClick={() => navigate("/profile/" + username + "/playlists/" + p.id)}>
+                            <div className="playlist-card-title">{p.name}</div>
+                            {p.description && <div style={{ fontSize: "0.84rem", color: "rgba(44,36,32,0.62)", marginBottom: "0.4rem" }}>{p.description}</div>}
+                            <div className="playlist-card-info">
+                                <span className="playlist-card-category" style={{ marginRight: "0.6rem" }}>{p.category}</span>
+                                <span>{p.songCount} {p.songCount === 1 ? "song" : "songs"}</span>
+                            </div>
+                        </div>
+                    ))}
+                </>
+            )}
+
+            {/* Rated Albums */}
+            <div className="section-title" style={{ marginBottom: "1rem", marginTop: "1.5rem" }}>Rated Albums</div>
 
             {profile.ratings.length === 0 && (
                 <div className="empty">No ratings yet.</div>
@@ -2187,6 +2405,7 @@ export default function App() {
                     <Route path="/search"             element={<SearchPage />} />
                     <Route path="/playlists"          element={<PlaylistsPage />} />
                     <Route path="/playlists/:id"      element={<PlaylistDetailPage />} />
+                    <Route path="/profile/:username/playlists/:id" element={<PublicPlaylistPage />} />
                     <Route path="/account"            element={<AccountPage />} />
                     <Route path="/profile/:username"  element={<ProfilePage />} />
                     <Route path="/signup"             element={<SignupPage />} />
