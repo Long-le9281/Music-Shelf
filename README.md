@@ -1,5 +1,5 @@
 # Elgooners Record Shelf
-### CSCI 2040U - Iteration 2
+### CSCI 2040U - Iteration 3
 
 ## Project Overview
 Elgooners Record Shelf is a full-stack app for browsing albums, searching music, rating albums, managing profiles, and creating playlists.
@@ -9,7 +9,7 @@ Elgooners Record Shelf is a full-stack app for browsing albums, searching music,
 - Catalog/data files: CSV + runtime DB (`database/`)
 
 ## Documentation Index
-- Runbook and rubric mapping: `LAB9_DEMO_PRESENTATION.md`
+- Runbook and rubric mapping: `PRESENTATION.md`
 - Quick startup and testing guide: `QUICK_START.md`
 - System test plan and workflow coverage: `docs/SYSTEM_TESTS.md`
 - Unit test documentation: `docs/UNIT_TESTS.md`
@@ -17,7 +17,7 @@ Elgooners Record Shelf is a full-stack app for browsing albums, searching music,
 ## Repository Structure
 
 ```text
-elgooners-iteration2/
+Music-Shelf/
 |-- backend/
 |   |-- pom.xml
 |   `-- src/main/java/com/elgooners/app/App.java
@@ -38,7 +38,7 @@ elgooners-iteration2/
 - npm 9+
 
 ## Build and Run (Manual)
-From the repo root (`elgooners-iteration2`):
+From the repo root (`Music-Shelf`):
 
 ```powershell
 Set-Location .\backend
