@@ -1176,7 +1176,7 @@ function ShelfPage() {
     }
 
     if (loading) return <div className="page loading">LOADING RECORDS…</div>;
-    if (albums.length === 0) return <div className="page loading">No albums found. Run database/setup.py first.</div>;
+    if (albums.length === 0) return <div className="page loading">No albums found.</div>;
 
     const detailTitle = songsMode
         ? (focusedSong?.title || "Select a song")
@@ -2170,37 +2170,7 @@ function AccountPage() {
             )}
 
             <div className="account-grid">
-                <div className="account-card">
-                    <h3>Lookup Users</h3>
-                    <div className="inline-form">
-                        <input
-                            value={lookupQuery}
-                            onChange={(e) => {
-                                setLookupQuery(e.target.value);
-                                setLookupAttempted(false);
-                            }}
-                            placeholder="Search by username or display name"
-                        />
-                        <button className="ghost-btn" onClick={runLookup}>Find</button>
-                    </div>
-                    <div style={{ marginTop: "0.9rem" }}>
-                        {lookupUsers.map((u) => (
-                            <div className="lookup-row" key={u.username}>
-                                <div className="lookup-avatar" style={{ background: u.avatarColor }} />
-                                <div>
-                                    <div style={{ fontSize: "0.85rem", fontWeight: 600 }}>{u.displayName || u.username}</div>
-                                    <div style={{ fontSize: "0.73rem", color: "rgba(44,36,32,0.55)" }}>@{u.username} · {u.ratingCount} ratings</div>
-                                </div>
-                                {u.isAdmin && <span className="admin-pill">Admin</span>}
-                            </div>
-                        ))}
-                        {lookupAttempted && lookupQuery.trim() && lookupUsers.length === 0 && (
-                            <div className="empty" style={{ padding: "1rem 0" }}>No matching users.</div>
-                        )}
-                    </div>
-                </div>
-
-                <div className="account-card">
+                <div className="account-card" style={{ gridColumn: "1 / -1" }}>
                     <h3>Promotion + History</h3>
                     {!account?.isAdmin && (
                         <>
