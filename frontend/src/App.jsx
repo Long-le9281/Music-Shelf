@@ -2013,6 +2013,9 @@ function AccountPage() {
     const [adminUsers, setAdminUsers] = useState([]);
     const [promotionCode, setPromotionCode] = useState("");
     const [message, setMessage] = useState("");
+    const [bioInput, setBioInput] = useState("");
+    const [bioSaving, setBioSaving] = useState(false);
+    const [bioEditing, setBioEditing] = useState(false);
     const [createForm, setCreateForm] = useState({
         username: "",
         password: "",
@@ -2030,6 +2033,7 @@ function AccountPage() {
         apiGet("/profile/me?historyLimit=12")
             .then((data) => {
                 setAccount(data);
+                setBioInput(data.bio || "");
                 patchUser({
                     displayName: data.displayName || data.username,
                     avatarColor: data.avatarColor,
@@ -2039,7 +2043,7 @@ function AccountPage() {
                 });
             })
             .catch((err) => setMessage(err.message));
-    }, [user]);
+    }, [user?.username]);
 
     async function refreshAdminUsers() {
         if (!account?.isAdmin) return;
@@ -2067,6 +2071,22 @@ function AccountPage() {
             setLookupUsers(data.users || []);
         } catch (err) {
             setMessage(err.message);
+        }
+    }
+
+    async function saveBio() {
+        if (bioSaving) return;
+        setBioSaving(true);
+        try {
+            const data = await apiPut("/profile/me/bio", { bio: bioInput });
+            setAccount(prev => prev ? { ...prev, bio: data.bio } : prev);
+            patchUser({ bio: data.bio });
+            setBioEditing(false);
+            setMessage("Bio updated!");
+        } catch (err) {
+            setMessage(err.message);
+        } finally {
+            setBioSaving(false);
         }
     }
 
@@ -2165,7 +2185,41 @@ function AccountPage() {
                             <div style={{ fontSize: "0.8rem", color: "rgba(44,36,32,0.6)" }}>@{account.username} {account.isAdmin ? "· admin" : ""}</div>
                         </div>
                     </div>
-                    {account.bio && <div style={{ marginTop: "0.75rem", color: "rgba(44,36,32,0.75)" }}>{account.bio}</div>}
+                    {account.bio && !bioEditing && <div style={{ marginTop: "0.75rem", color: "rgba(44,36,32,0.75)" }}>{account.bio}</div>}
+                    {!account.bio && !bioEditing && <div style={{ marginTop: "0.75rem", color: "rgba(44,36,32,0.4)", fontSize: "0.85rem" }}>No bio yet.</div>}
+                    {bioEditing ? (
+                        <div style={{ marginTop: "1rem" }}>
+                            <div style={{ fontSize: "0.78rem", color: "rgba(44,36,32,0.55)", marginBottom: "0.35rem" }}>{bioInput.length}/300</div>
+                            <textarea
+                                autoFocus
+                                value={bioInput}
+                                onChange={e => setBioInput(e.target.value.slice(0, 300))}
+                                placeholder="Tell people about yourself…"
+                                rows={3}
+                                style={{
+                                    width: "100%", boxSizing: "border-box",
+                                    borderRadius: 8, border: "1px solid rgba(139,115,85,0.4)",
+                                    background: "rgba(255,255,255,0.7)", padding: "0.5rem 0.7rem",
+                                    fontFamily: "inherit", fontSize: "0.85rem", resize: "vertical",
+                                    color: "#2c2420", outline: "none",
+                                }}
+                            />
+                            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.4rem" }}>
+                                <button className="ghost-btn" onClick={saveBio} disabled={bioSaving}>
+                                    {bioSaving ? "Saving…" : "Update Bio"}
+                                </button>
+                                <button className="ghost-btn" onClick={() => { setBioEditing(false); setBioInput(account.bio || ""); }} disabled={bioSaving}>
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button
+                            className="ghost-btn"
+                            onClick={() => { setBioInput(account.bio || ""); setBioEditing(true); }}
+                            style={{ marginTop: "0.75rem" }}
+                        >Edit Bio</button>
+                    )}
                 </div>
             )}
 

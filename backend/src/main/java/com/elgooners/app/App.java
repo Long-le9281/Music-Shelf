@@ -1179,6 +1179,18 @@ class Database {
         }
     }
 
+    void updateBio(long userId, String bio) {
+        String sql = "UPDATE users SET bio = ? WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, bio);
+            stmt.setLong(2, userId);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not update bio: " + e.getMessage());
+        }
+    }
+
     long createPlaylist(long userId, String name, String description, String category) {
         String sql = "INSERT INTO playlists (user_id, name, description, category) VALUES (?, ?, ?, ?)";
         try (Connection conn = getConnection();
@@ -2200,6 +2212,18 @@ class ProfileController {
             "isAdmin", user.getOrDefault("isAdmin", false),
             "recentHistory", history
         ));
+    }
+
+    @PutMapping("/me/bio")
+    public ResponseEntity<?> updateBio(@RequestBody Map<String, Object> body,
+                                       @AuthenticationPrincipal UserDetails principal) {
+        Map<String, Object> user = db.findUser(principal.getUsername());
+        if (user == null) return ResponseEntity.status(404).body(Map.of("error", "User not found"));
+        String bio = String.valueOf(body.getOrDefault("bio", "")).trim();
+        if (bio.length() > 300) return ResponseEntity.badRequest().body(Map.of("error", "Bio must be 300 characters or fewer"));
+        long userId = ((Number) user.get("id")).longValue();
+        db.updateBio(userId, bio);
+        return ResponseEntity.ok(Map.of("bio", bio));
     }
 }
 
