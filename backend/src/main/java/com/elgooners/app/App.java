@@ -1179,6 +1179,18 @@ class Database {
         }
     }
 
+    void updateBio(long userId, String bio) {
+        String sql = "UPDATE users SET bio = ? WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, bio);
+            stmt.setLong(2, userId);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not update bio: " + e.getMessage());
+        }
+    }
+
     long createPlaylist(long userId, String name, String description, String category) {
         String sql = "INSERT INTO playlists (user_id, name, description, category) VALUES (?, ?, ?, ?)";
         try (Connection conn = getConnection();
@@ -1225,6 +1237,57 @@ class Database {
             throw new RuntimeException("Could not get playlists: " + e.getMessage());
         }
         return playlists;
+    }
+
+    Map<String, Object> getPlaylistByIdPublic(long playlistId) {
+        String playlistSql = """
+            SELECT id, name, description, category, created_at
+            FROM playlists
+            WHERE id = ?
+            """;
+        String songsSql = """
+            SELECT s.id, s.title, s.track_number, s.duration_seconds,
+                   a.id AS album_id, a.title AS album_title, a.artist
+            FROM playlist_songs ps
+            JOIN songs s ON s.id = ps.song_id
+            LEFT JOIN albums a ON a.id = s.album_id
+            WHERE ps.playlist_id = ?
+            ORDER BY ps.id DESC
+            """;
+        try (Connection conn = getConnection();
+             PreparedStatement playlistStmt = conn.prepareStatement(playlistSql);
+             PreparedStatement songsStmt = conn.prepareStatement(songsSql)) {
+            playlistStmt.setLong(1, playlistId);
+            ResultSet playlistRs = playlistStmt.executeQuery();
+            if (!playlistRs.next()) return null;
+
+            Map<String, Object> playlist = new HashMap<>();
+            playlist.put("id", playlistRs.getLong("id"));
+            playlist.put("name", playlistRs.getString("name"));
+            playlist.put("description", playlistRs.getString("description"));
+            playlist.put("category", playlistRs.getString("category"));
+            playlist.put("createdAt", playlistRs.getString("created_at"));
+
+            songsStmt.setLong(1, playlistId);
+            ResultSet songsRs = songsStmt.executeQuery();
+            List<Map<String, Object>> songs = new ArrayList<>();
+            while (songsRs.next()) {
+                Map<String, Object> song = new HashMap<>();
+                song.put("id", songsRs.getLong("id"));
+                song.put("title", songsRs.getString("title"));
+                song.put("trackNumber", songsRs.getInt("track_number"));
+                song.put("durationSeconds", songsRs.getInt("duration_seconds"));
+                song.put("albumId", songsRs.getLong("album_id"));
+                song.put("albumTitle", songsRs.getString("album_title"));
+                song.put("artist", songsRs.getString("artist"));
+                songs.add(song);
+            }
+            playlist.put("songs", songs);
+            playlist.put("songCount", songs.size());
+            return playlist;
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not get playlist: " + e.getMessage());
+        }
     }
 
     Map<String, Object> getPlaylistByIdForUser(long playlistId, long userId) {
@@ -1485,6 +1548,43 @@ class Database {
             }
         } catch (SQLException e) {
             System.out.println("Error getting user ratings: " + e.getMessage());
+        }
+        return ratings;
+    }
+
+    // Get all song ratings a user has given, sorted by highest stars first
+    List<Map<String, Object>> getSongRatingsByUser(long userId) {
+        String sql = """
+            SELECT sr.stars, sr.updated_at, s.id AS song_id, s.title, s.track_number,
+                   a.title AS album_title, a.artist, a.color1, a.color2, a.album_art_url
+            FROM song_ratings sr
+            JOIN songs s ON s.id = sr.song_id
+            JOIN albums a ON a.id = s.album_id
+            WHERE sr.user_id = ?
+            ORDER BY sr.stars DESC, COALESCE(sr.updated_at, '') DESC
+            LIMIT 20
+            """;
+        List<Map<String, Object>> ratings = new ArrayList<>();
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, userId);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                Map<String, Object> rating = new HashMap<>();
+                rating.put("stars",       rs.getInt("stars"));
+                rating.put("songId",      rs.getLong("song_id"));
+                rating.put("title",       rs.getString("title"));
+                rating.put("trackNumber", rs.getInt("track_number"));
+                rating.put("albumTitle",  rs.getString("album_title"));
+                rating.put("artist",      rs.getString("artist"));
+                rating.put("color1",      rs.getString("color1"));
+                rating.put("color2",      rs.getString("color2"));
+                rating.put("albumArtUrl", rs.getString("album_art_url"));
+                rating.put("updatedAt",   rs.getString("updated_at"));
+                ratings.add(rating);
+            }
+        } catch (SQLException e) {
+            System.out.println("Error getting user song ratings: " + e.getMessage());
         }
         return ratings;
     }
@@ -2061,6 +2161,8 @@ class ProfileController {
 
         long userId = ((Number) user.get("id")).longValue();
         List<Map<String, Object>> ratings = db.getRatingsByUser(userId);
+        List<Map<String, Object>> songRatings = db.getSongRatingsByUser(userId);
+        List<Map<String, Object>> playlists = db.getPlaylistsByUser(userId);
 
         // Build the profile response (don't include the password!)
         Map<String, Object> profile = new LinkedHashMap<>();
@@ -2072,8 +2174,23 @@ class ProfileController {
         profile.put("isAdmin", user.getOrDefault("isAdmin", false));
         profile.put("ratingCount", ratings.size());
         profile.put("ratings",     ratings);
+        profile.put("songRatings", songRatings);
+        profile.put("playlists",   playlists);
 
         return ResponseEntity.ok(profile);
+    }
+
+    @GetMapping("/{username}/playlists/{playlistId}")
+    public ResponseEntity<?> getPublicPlaylist(@PathVariable String username,
+                                               @PathVariable long playlistId) {
+        Map<String, Object> user = db.findUser(username);
+        if (user == null || user.get("deletedAt") != null || Boolean.FALSE.equals(user.get("isActive"))) {
+            return ResponseEntity.notFound().build();
+        }
+        long userId = ((Number) user.get("id")).longValue();
+        Map<String, Object> playlist = db.getPlaylistByIdForUser(playlistId, userId);
+        if (playlist == null) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(playlist);
     }
 
     @GetMapping("/me")
@@ -2095,6 +2212,18 @@ class ProfileController {
             "isAdmin", user.getOrDefault("isAdmin", false),
             "recentHistory", history
         ));
+    }
+
+    @PutMapping("/me/bio")
+    public ResponseEntity<?> updateBio(@RequestBody Map<String, Object> body,
+                                       @AuthenticationPrincipal UserDetails principal) {
+        Map<String, Object> user = db.findUser(principal.getUsername());
+        if (user == null) return ResponseEntity.status(404).body(Map.of("error", "User not found"));
+        String bio = String.valueOf(body.getOrDefault("bio", "")).trim();
+        if (bio.length() > 300) return ResponseEntity.badRequest().body(Map.of("error", "Bio must be 300 characters or fewer"));
+        long userId = ((Number) user.get("id")).longValue();
+        db.updateBio(userId, bio);
+        return ResponseEntity.ok(Map.of("bio", bio));
     }
 }
 
