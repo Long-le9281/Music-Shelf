@@ -366,6 +366,10 @@ class Database {
         return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
     }
 
+    private String normalizeCommentTargetType(String targetType) {
+        return targetType == null ? "" : targetType.trim().toLowerCase(Locale.ROOT);
+    }
+
     private List<String> parseCsvLine(String line) {
         ArrayList<String> values = new ArrayList<>();
         if (line == null) return values;
@@ -487,11 +491,27 @@ class Database {
                     UNIQUE(playlist_id, song_id)
                 )
                 """);
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS comments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    target_type TEXT NOT NULL,
+                    target_id INTEGER NOT NULL,
+                    text TEXT NOT NULL,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+                """);
             // Migrate older playlist schemas that were created before these columns existed.
             addColumnIfMissing(conn, "playlists", "description", "TEXT DEFAULT ''");
             addColumnIfMissing(conn, "playlists", "category", "TEXT DEFAULT 'Custom'");
             addColumnIfMissing(conn, "playlists", "created_at", "TEXT DEFAULT CURRENT_TIMESTAMP");
             addColumnIfMissing(conn, "playlist_songs", "created_at", "TEXT DEFAULT CURRENT_TIMESTAMP");
+            addColumnIfMissing(conn, "comments", "target_type", "TEXT");
+            addColumnIfMissing(conn, "comments", "target_id", "INTEGER");
+            addColumnIfMissing(conn, "comments", "text", "TEXT");
+            addColumnIfMissing(conn, "comments", "created_at", "TEXT");
+            addColumnIfMissing(conn, "comments", "updated_at", "TEXT");
             stmt.execute("UPDATE users SET created_at = COALESCE(NULLIF(created_at, ''), CURRENT_TIMESTAMP)");
             stmt.execute("UPDATE users SET display_name = COALESCE(NULLIF(display_name, ''), username)");
             stmt.execute("UPDATE users SET bio = COALESCE(bio, '')");
@@ -501,11 +521,15 @@ class Database {
             stmt.execute("UPDATE albums SET release_year = 0 WHERE release_year IS NULL OR release_year < 1880 OR release_year > " + (Year.now().getValue() + 1));
             stmt.execute("UPDATE ratings SET updated_at = COALESCE(NULLIF(updated_at, ''), CURRENT_TIMESTAMP)");
             stmt.execute("UPDATE song_ratings SET updated_at = COALESCE(NULLIF(updated_at, ''), CURRENT_TIMESTAMP)");
+            stmt.execute("UPDATE comments SET created_at = COALESCE(NULLIF(created_at, ''), CURRENT_TIMESTAMP)");
+            stmt.execute("UPDATE comments SET updated_at = COALESCE(NULLIF(updated_at, ''), CURRENT_TIMESTAMP)");
             stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_album_identity ON albums(title, artist)");
             stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_song_identity ON songs(album_id, track_number, title)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_song_ratings_song ON song_ratings(song_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_playlists_user ON playlists(user_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_playlist_songs_playlist ON playlist_songs(playlist_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_comments_target ON comments(target_type, target_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_comments_user ON comments(user_id)");
         } catch (SQLException e) {
             System.out.println("Error ensuring schema: " + e.getMessage());
         }
@@ -1179,6 +1203,10 @@ class Database {
         }
     }
 
+    private boolean userExists(Connection conn, long userId) throws SQLException {
+        try (PreparedStatement stmt = conn.prepareStatement("SELECT id FROM users WHERE id = ?")) {
+            stmt.setLong(1, userId);
+            return stmt.executeQuery().next();
     void updateBio(long userId, String bio) {
         String sql = "UPDATE users SET bio = ? WHERE id = ?";
         try (Connection conn = getConnection();
@@ -1488,6 +1516,30 @@ class Database {
         return false;
     }
 
+    boolean albumExists(long albumId) {
+        String sql = "SELECT 1 FROM albums WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, albumId);
+            return stmt.executeQuery().next();
+        } catch (SQLException e) {
+            System.out.println("Error checking album: " + e.getMessage());
+        }
+        return false;
+    }
+
+    boolean userExists(long userId) {
+        String sql = "SELECT 1 FROM users WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, userId);
+            return stmt.executeQuery().next();
+        } catch (SQLException e) {
+            System.out.println("Error checking user: " + e.getMessage());
+        }
+        return false;
+    }
+
     void saveSongRating(long userId, long songId, int stars) {
         String sql = """
             INSERT INTO song_ratings (user_id, song_id, stars, updated_at)
@@ -1619,6 +1671,95 @@ class Database {
             System.out.println("Error getting account history: " + e.getMessage());
         }
         return history;
+    }
+
+    private boolean commentTargetExists(Connection conn, String targetType, long targetId) throws SQLException {
+        return switch (normalizeCommentTargetType(targetType)) {
+            case "album" -> albumExists(conn, targetId);
+            case "song" -> songExists(conn, targetId);
+            case "profile" -> userExists(conn, targetId);
+            default -> false;
+        };
+    }
+
+    private Map<String, Object> mapCommentRow(ResultSet rs) throws SQLException {
+        Map<String, Object> comment = new LinkedHashMap<>();
+        comment.put("id", rs.getLong("id"));
+        comment.put("userId", rs.getLong("user_id"));
+        comment.put("username", rs.getString("username"));
+        comment.put("displayName", rs.getString("display_name"));
+        comment.put("avatarColor", rs.getString("avatar_color"));
+        comment.put("targetType", rs.getString("target_type"));
+        comment.put("targetId", rs.getLong("target_id"));
+        comment.put("text", rs.getString("text"));
+        comment.put("createdAt", rs.getString("created_at"));
+        comment.put("updatedAt", rs.getString("updated_at"));
+        return comment;
+    }
+
+    long createComment(long userId, String targetType, long targetId, String text) {
+        String normalizedType = normalizeCommentTargetType(targetType);
+        if (!Set.of("album", "song", "profile").contains(normalizedType)) {
+            throw new IllegalArgumentException("Unsupported comment target type: " + targetType);
+        }
+
+        String cleanText = text == null ? "" : text.trim();
+        if (cleanText.isBlank()) {
+            throw new IllegalArgumentException("Comment text cannot be blank");
+        }
+
+        String sql = """
+            INSERT INTO comments (user_id, target_type, target_id, text, created_at, updated_at)
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            """;
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            stmt.setLong(1, userId);
+            stmt.setString(2, normalizedType);
+            stmt.setLong(3, targetId);
+            stmt.setString(4, cleanText);
+            stmt.executeUpdate();
+            ResultSet keys = stmt.getGeneratedKeys();
+            if (keys.next()) return keys.getLong(1);
+            throw new RuntimeException("Comment insert succeeded but no ID returned");
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not create comment: " + e.getMessage());
+        }
+    }
+
+    List<Map<String, Object>> getCommentsByTarget(String targetType, long targetId) {
+        String normalizedType = normalizeCommentTargetType(targetType);
+        String sql = """
+            SELECT c.id, c.user_id, c.target_type, c.target_id, c.text, c.created_at, c.updated_at,
+                   u.username, u.avatar_color,
+                   COALESCE(u.display_name, u.username) AS display_name
+            FROM comments c
+            JOIN users u ON u.id = c.user_id
+            WHERE c.target_type = ? AND c.target_id = ?
+            ORDER BY COALESCE(c.updated_at, c.created_at, '') DESC, c.id DESC
+            """;
+        List<Map<String, Object>> comments = new ArrayList<>();
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, normalizedType);
+            stmt.setLong(2, targetId);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                comments.add(mapCommentRow(rs));
+            }
+        } catch (SQLException e) {
+            System.out.println("Error getting comments: " + e.getMessage());
+        }
+        return comments;
+    }
+
+    boolean commentTargetExists(String targetType, long targetId) {
+        try (Connection conn = getConnection()) {
+            return commentTargetExists(conn, targetType, targetId);
+        } catch (SQLException e) {
+            System.out.println("Error checking comment target: " + e.getMessage());
+            return false;
+        }
     }
 
     private String buildFallbackLyrics(String title) {
