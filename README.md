@@ -68,19 +68,12 @@ All tests are in `backend/src/test/java/com/elgooners/app/`.
 
 ```powershell
 Set-Location .\backend
-mvn -Dtest=Iteration1DoneColumnTest test
-mvn -Dtest=Iteration2InProgressColumnTest test
+mvn -Dtest=Iteration1 test
+mvn -Dtest=Iteration2 test
 mvn -Dtest=JwtHelperTest test
+mvn -Dtest=Iteration3 test
 ```
 
-### Red tests (expected to fail intentionally)
-
-```powershell
-Set-Location .\backend
-mvn -Dtest=Iteration3ToDoColumnRedDemo test
-```
-
-`Iteration3ToDoColumnRedDemo` represents unimplemented To-Do board items and is intentionally red for TDD/demo use.
 
 ## Key Features Present
 - Authentication: signup/login with JWT
