@@ -2,50 +2,41 @@
 setlocal
 
 set "ROOT=%~dp0"
-set "BACKEND=%ROOT%backend"
-set "FRONTEND=%ROOT%frontend"
+set "BACKEND_SCRIPT=%ROOT%run-backend.bat"
+set "FRONTEND_SCRIPT=%ROOT%run-frontend.bat"
 
 echo Music Shelf launcher
 echo Root: %ROOT%
 
-where java >nul 2>nul
-if errorlevel 1 (
-	echo Java was not found on PATH.
+if not exist "%BACKEND_SCRIPT%" (
+	echo Backend launcher was not found at "%BACKEND_SCRIPT%".
 	pause
 	exit /b 1
 )
 
-where mvn >nul 2>nul
-if errorlevel 1 (
-	echo Maven was not found on PATH.
+if not exist "%FRONTEND_SCRIPT%" (
+	echo Frontend launcher was not found at "%FRONTEND_SCRIPT%".
 	pause
 	exit /b 1
 )
 
-where npm >nul 2>nul
-if errorlevel 1 (
-	echo npm was not found on PATH.
-	pause
-	exit /b 1
-)
-
-if not exist "%BACKEND%\pom.xml" (
-	echo Backend pom.xml was not found.
-	pause
-	exit /b 1
-)
-
-if not exist "%FRONTEND%\package.json" (
-	echo Frontend package.json was not found.
-	pause
-	exit /b 1
+if /I "%~1"=="--check" (
+	call "%BACKEND_SCRIPT%" --check
+	if errorlevel 1 exit /b 1
+	call "%FRONTEND_SCRIPT%" --check
+	if errorlevel 1 exit /b 1
+	echo Combined checks passed.
+	exit /b 0
 )
 
 echo Starting backend on port 8080...
-start "Music Shelf Backend" powershell -NoExit -ExecutionPolicy Bypass -Command "& { Set-Location '%BACKEND%'; $env:JAVA_TOOL_OPTIONS='-Dnet.bytebuddy.experimental=true'; mvn -q -f pom.xml spring-boot:run }"
+start "Music Shelf Backend" cmd /k ""%BACKEND_SCRIPT%""
+
+echo Waiting 20 seconds for the backend to start before launching the frontend...
+timeout /t 20 /nobreak
 
 echo Starting frontend on port 3000...
-start "Music Shelf Frontend" powershell -NoExit -ExecutionPolicy Bypass -Command "& { Set-Location '%FRONTEND%'; if (-not (Test-Path 'node_modules')) { npm install; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }; npm start }"
+start "Music Shelf Frontend" cmd /k ""%FRONTEND_SCRIPT%""
 
 echo.
 echo The backend and frontend are launching in separate windows.

@@ -234,11 +234,11 @@ const css = `
     .stack-card-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: 1px; line-height: 1.1; color: #f5f1ed; }
     .stack-card-artist { font-size: 0.65rem; letter-spacing: 1px; text-transform: uppercase; opacity: 0.7; color: #d4a574; margin-top: 4px; }
 
-    .detail-panel { flex: 1; overflow: hidden; padding: 2.5rem 3rem; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .detail-shell { width: 100%; max-width: 900px; height: 100%; display: flex; flex-direction: column; min-height: 0; }
+    .detail-panel { flex: 1; overflow-y: auto; padding: 2.5rem 3rem; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
+    .detail-shell { width: 100%; max-width: 1200px; display: flex; flex-direction: column; }
 
-    .detail-top { display: flex; gap: 3rem; align-items: flex-start; margin-bottom: 2.5rem; max-width: 900px; width: 100%; }
-    .detail-scroll-region { flex: 1; min-height: 0; overflow-y: auto; padding-right: 0.4rem; }
+    .detail-top { display: flex; gap: 2rem; align-items: flex-start; margin-bottom: 2rem; width: 100%; }
+    .detail-scroll-region { padding-right: 0.4rem; margin-top: 0.5rem; }
 
     .album-cover {
         width: 260px; height: 260px; border-radius: 12px; flex-shrink: 0;
@@ -249,7 +249,18 @@ const css = `
         border: 3px solid #8b7355;
     }
 
-    .detail-info { flex: 1; max-width: 500px; }
+    .detail-info { flex: 1; min-width: 0; max-width: 440px; }
+    .comments-side-panel {
+        width: 290px;
+        flex-shrink: 0;
+        align-self: flex-start;
+        background: rgba(255,255,255,0.58);
+        border: 1px solid rgba(139,115,85,0.28);
+        border-radius: 12px;
+        padding: 1rem 1.1rem;
+        max-height: 500px;
+        overflow-y: auto;
+    }
     .detail-title { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; line-height: 1; letter-spacing: 2px; margin-bottom: 4px; color: #2c2420; }
     .detail-artist { font-size: 0.9rem; letter-spacing: 2px; text-transform: uppercase; color: rgba(44,36,32,0.55); margin-bottom: 1.5rem; }
 
@@ -1025,6 +1036,7 @@ function ShelfPage() {
     const [commentText, setCommentText] = useState("");
     const [commentSaving, setCommentSaving] = useState(false);
     const [commentSavedMsg, setCommentSavedMsg] = useState(false);
+    const [showComments, setShowComments] = useState(false);
     const [selectedSong, setSelectedSong] = useState(null);
     const [lyricsSong, setLyricsSong] = useState(null);
     const [mainFilter, setMainFilter] = useState("albums");
@@ -1145,6 +1157,7 @@ function ShelfPage() {
         setCommentText("");
         setCommentSavedMsg(false);
         setCommentsError("");
+        setShowComments(false);
     }, [commentTargetType, commentTargetId]);
 
     useEffect(() => {
@@ -1174,6 +1187,9 @@ function ShelfPage() {
         function onWheel(e) {
             const wheelTarget = e.target;
             if (wheelTarget instanceof Element && wheelTarget.closest(".track-scroll-region")) {
+                return;
+            }
+            if (wheelTarget instanceof Element && wheelTarget.closest(".detail-panel")) {
                 return;
             }
             e.preventDefault();
@@ -1472,19 +1488,30 @@ function ShelfPage() {
                                             label={songsMode ? "Rate this song" : "Rate this album"}
                                         />
                                         {savedMsg && <div className="saved-msg">✓ Saved!</div>}
-                                        <div style={{ marginTop: "0.7rem" }}>
+                                        <div style={{ marginTop: "0.7rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                                             <button className="ghost-btn" onClick={openAlbumPlaylistModal}>
                                                 + Add Album Songs to Playlist
+                                            </button>
+                                            <button className="ghost-btn" onClick={() => setShowComments(v => !v)}>
+                                                {showComments ? "Hide Comments" : `Comments${comments.length > 0 ? ` (${comments.length})` : ""}`}
                                             </button>
                                         </div>
                                     </>
                                 ) : (
-                                    <div className="sign-in-prompt">
-                                        <Link to="/login">Sign in</Link> to rate this {songsMode ? "song" : "album"}
-                                    </div>
+                                    <>
+                                        <div className="sign-in-prompt">
+                                            <Link to="/login">Sign in</Link> to rate this {songsMode ? "song" : "album"}
+                                        </div>
+                                        <button className="ghost-btn" style={{ marginTop: "0.7rem" }} onClick={() => setShowComments(v => !v)}>
+                                            {showComments ? "Hide Comments" : `Comments${comments.length > 0 ? ` (${comments.length})` : ""}`}
+                                        </button>
+                                    </>
                                 )}
+                            </div>
 
-                                <div className="comments-section">
+                            {/* Comments side panel — appears to the right on click */}
+                            {showComments && (
+                                <div className="comments-side-panel">
                                     <div className="comments-header">
                                         <div className="comments-title">Comments</div>
                                         <div className="comments-count">{comments.length} total</div>
@@ -1530,7 +1557,7 @@ function ShelfPage() {
                                         </div>
                                     )}
                                 </div>
-                            </div>
+                            )}
                         </div>
 
                         {/* Track list */}
@@ -2075,6 +2102,8 @@ function ProfilePage() {
     const [commentSaving, setCommentSaving] = useState(false);
     const [commentSavedMsg, setCommentSavedMsg] = useState(false);
 
+    const [selectedStars, setSelectedStars] = useState("All");
+
     useEffect(() => {
         apiGet("/profile/" + username)
             .then(data => setProfile(data))
@@ -2130,6 +2159,18 @@ function ProfilePage() {
     if (loading) return <div className="page loading">Loading profile...</div>;
     if (error || !profile) return <div className="page empty">Profile not found.</div>;
 
+    const starOptions = ["All", 1, 2, 3, 4, 5];
+
+    function cycleStars() {
+        const currentIndex = starOptions.indexOf(selectedStars);
+        const nextIndex = (currentIndex + 1) % starOptions.length;
+        setSelectedStars(starOptions[nextIndex]);
+    }
+
+    const filteredRatings =
+        selectedStars === "All"
+            ? profile.ratings
+            : profile.ratings.filter(r => r.stars === selectedStars);
     const topSongs = (profile.songRatings || []).filter(s => s.stars >= 4);
 
     return (
@@ -2147,6 +2188,14 @@ function ProfilePage() {
                 </div>
             </div>
 
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                <div className="section-title">
+                    Rated Albums {selectedStars !== "All" ? `: ${selectedStars}★` : ""}
+                </div>
+                <button onClick={cycleStars} style={{ cursor: "pointer" }}>
+                    Filter Rating
+                </button>
+            </div>
             <div className="comments-section">
                 <div className="comments-header">
                     <div className="comments-title">Comments</div>
@@ -2236,17 +2285,18 @@ function ProfilePage() {
             {/* Rated Albums */}
             <div className="section-title" style={{ marginBottom: "1rem", marginTop: "1.5rem" }}>Rated Albums</div>
 
-            {profile.ratings.length === 0 && (
+            {filteredRatings.length === 0 && (
                 <div className="empty">No ratings yet.</div>
             )}
 
-            {profile.ratings.map((r, i) => (
+            {filteredRatings.map((r, i) => (
                 <div key={i} className="rating-row">
                     <div className="rating-art" style={{ background: `linear-gradient(135deg, ${r.color1}, ${r.color2})` }} />
                     <div>
                         <div className="rating-album-title">{r.title}</div>
                         <div className="rating-album-artist">
                             {r.artist}
+                            {r.year}
                             {r.updatedAt ? ` · rated ${new Date(r.updatedAt).toLocaleDateString()}` : ""}
                         </div>
                     </div>
