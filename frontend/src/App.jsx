@@ -490,6 +490,48 @@ const css = `
     .profile-name { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; letter-spacing: 2px; color: #2c2420; }
     .profile-rating-count { font-size: 0.8rem; color: rgba(44,36,32,0.55); letter-spacing: 1px; margin-top: 4px; }
     .profile-rating-count strong { color: #d4744f; font-size: 1.1rem; }
+    .profile-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+    .profile-filter-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        border: 1px solid rgba(139,115,85,0.45);
+        background: linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.68) 100%);
+        color: #2c2420;
+        border-radius: 999px;
+        font-size: 0.68rem;
+        letter-spacing: 1.3px;
+        text-transform: uppercase;
+        padding: 0.55rem 0.9rem;
+        cursor: pointer;
+        font-family: inherit;
+        font-weight: 700;
+        box-shadow: 0 4px 14px rgba(44,36,32,0.08);
+        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    }
+    .profile-filter-btn:hover {
+        transform: translateY(-1px);
+        border-color: rgba(212,116,79,0.5);
+        background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.8) 100%);
+        box-shadow: 0 8px 20px rgba(44,36,32,0.12);
+    }
+    .profile-filter-btn:focus-visible {
+        outline: 2px solid rgba(212,116,79,0.45);
+        outline-offset: 2px;
+    }
+    .profile-filter-value {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 3.5rem;
+        padding: 0.22rem 0.55rem;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #d4744f 0%, #c26241 100%);
+        color: #f5f1ed;
+        font-size: 0.64rem;
+        letter-spacing: 1px;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
+    }
     .rating-row { display: flex; align-items: center; gap: 1rem; padding: 1rem 1rem; border-radius: 10px; transition: all 0.2s; border: 2px solid transparent; }
     .rating-row:hover { background: rgba(139,115,85,0.15); border-color: rgba(139,115,85,0.3); }
     .rating-art { width: 48px; height: 48px; border-radius: 6px; flex-shrink: 0; border: 2px solid #8b7355; }
@@ -717,7 +759,7 @@ function Navbar() {
 
     return (
         <nav className="navbar">
-            <Link to="/" className="navbar-logo">ELGOON<span>ERS</span></Link>
+            <Link to="/" className="navbar-logo">Alex<span>ic</span></Link>
             <div className="navbar-links">
                 <Link to="/">Shelf</Link>
                 <Link to="/search">Search</Link>
@@ -2188,12 +2230,13 @@ function ProfilePage() {
                 </div>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+            <div className="profile-toolbar">
                 <div className="section-title">
                     Rated Albums {selectedStars !== "All" ? `: ${selectedStars}★` : ""}
                 </div>
-                <button onClick={cycleStars} style={{ cursor: "pointer" }}>
+                <button className="profile-filter-btn" type="button" onClick={cycleStars}>
                     Filter Rating
+                    <span className="profile-filter-value">{selectedStars === "All" ? "All" : `${selectedStars}★`}</span>
                 </button>
             </div>
             <div className="comments-section">
