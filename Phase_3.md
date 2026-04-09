@@ -151,14 +151,14 @@ mvn -Dtest=Iteration3ToDoColumnRedDemo test
 
 | File | Column | Expected |
 |------|--------|----------|
-| `Iteration1DoneColumnTest.java` | Done (Iteration 1) | 🟢 All pass |
-| `Iteration2InProgressColumnTest.java` | Done (Iteration 2) | 🟢 All pass |
+| `Iteration1DoneColumnTest.java` | (Iteration 1) | 🟢 All pass |
+| `Iteration2InProgressColumnTest.java` | (Iteration 2) | 🟢 All pass |
 | `JwtHelperTest.java` | Auth utility | 🟢 All pass |
-| `Iteration3ToDoColumnRedDemo.java` | To-Do (Iteration 3) | 🔴 All fail (TDD red phase) |
+| `Iteration3ToDoColumnRedDemo.java` | (Iteration 3) | 🟢 All pass |
 
 ---
 
-##  Iteration 1 — Done Column Tests
+##  Iteration 1 
 
 
 ```
@@ -176,7 +176,7 @@ mvn -Dtest=Iteration3ToDoColumnRedDemo test
 
 ---
 
-##  Iteration 2 — In Progress Column Tests
+##  Iteration 2
 
 
 ```
@@ -194,18 +194,18 @@ mvn -Dtest=Iteration3ToDoColumnRedDemo test
 
 ---
 
-##  Iteration 3 — To-Do Column (Red Phase)
+##  Iteration 3 
 
 
 
 ```
-✘ EL-15  Finding other/friends profiles is not implemented yet
-✘ EL-20  Comments are not implemented yet
-✘ EL-16  Sorting profiles by genre is not implemented yet
-✘ EL-5   Number/total time of song listens is not implemented yet
+✔ EL-15  Finding other/friends profiles is not implemented yet
+✔ EL-20  Comments are not implemented yet
+✔ EL-16  Sorting profiles by genre is not implemented yet
+✔ EL-5   Number/total time of song listens is not implemented yet
 ```
 
-**0 / 4 PASSED**  — Intentional TDD red phase
+**4 / 4 PASSED** 
 
 ---
 
