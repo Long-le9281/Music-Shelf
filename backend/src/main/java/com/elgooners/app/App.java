@@ -1207,6 +1207,9 @@ class Database {
         try (PreparedStatement stmt = conn.prepareStatement("SELECT id FROM users WHERE id = ?")) {
             stmt.setLong(1, userId);
             return stmt.executeQuery().next();
+        }
+    }
+
     void updateBio(long userId, String bio) {
         String sql = "UPDATE users SET bio = ? WHERE id = ?";
         try (Connection conn = getConnection();
@@ -1901,6 +1904,7 @@ class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/search/add").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/profile/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/users/lookup").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/comments").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 // Everything else requires the user to be logged in
                 .anyRequest().authenticated()
@@ -2281,6 +2285,107 @@ class RatingController {
 }
 
 // ============================================================
+// COMMENT CONTROLLER
+// Public read, authenticated write for album/song/profile comments.
+//
+// GET  /api/comments?targetType=album|song|profile&targetId=123
+// POST /api/comments { "targetType": "album", "targetId": 1, "text": "Great record" }
+// ============================================================
+
+@RestController
+@RequestMapping("/api/comments")
+class CommentController {
+
+    @Autowired Database db;
+
+    @GetMapping
+    public ResponseEntity<?> getComments(@RequestParam(defaultValue = "") String targetType,
+                                         @RequestParam(defaultValue = "") String targetId) {
+        String normalizedType = targetType.trim().toLowerCase(Locale.ROOT);
+        if (!Set.of("album", "song", "profile").contains(normalizedType)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "targetType must be one of: album, song, profile"));
+        }
+
+        long parsedTargetId;
+        try {
+            parsedTargetId = Long.parseLong(targetId.trim());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "targetId must be a positive integer"));
+        }
+        if (parsedTargetId <= 0) {
+            return ResponseEntity.badRequest().body(Map.of("error", "targetId must be a positive integer"));
+        }
+
+        if (!db.commentTargetExists(normalizedType, parsedTargetId)) {
+            return ResponseEntity.status(404).body(Map.of("error", "Comment target not found"));
+        }
+
+        List<Map<String, Object>> comments = db.getCommentsByTarget(normalizedType, parsedTargetId);
+        return ResponseEntity.ok(Map.of(
+            "targetType", normalizedType,
+            "targetId", parsedTargetId,
+            "count", comments.size(),
+            "comments", comments
+        ));
+    }
+
+    @PostMapping
+    public ResponseEntity<?> createComment(@RequestBody Map<String, Object> body,
+                                           @AuthenticationPrincipal UserDetails principal) {
+        if (principal == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+        }
+
+        String targetType = String.valueOf(body.getOrDefault("targetType", "")).trim().toLowerCase(Locale.ROOT);
+        if (!Set.of("album", "song", "profile").contains(targetType)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "targetType must be one of: album, song, profile"));
+        }
+
+        long parsedTargetId;
+        try {
+            parsedTargetId = Long.parseLong(String.valueOf(body.getOrDefault("targetId", "")).trim());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "targetId must be a positive integer"));
+        }
+        if (parsedTargetId <= 0) {
+            return ResponseEntity.badRequest().body(Map.of("error", "targetId must be a positive integer"));
+        }
+
+        String text = String.valueOf(body.getOrDefault("text", "")).trim();
+        if (text.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Comment text cannot be blank"));
+        }
+        if (text.length() > 500) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Comment text must be 500 characters or fewer"));
+        }
+
+        if (!db.commentTargetExists(targetType, parsedTargetId)) {
+            return ResponseEntity.status(404).body(Map.of("error", "Comment target not found"));
+        }
+
+        Map<String, Object> user = db.findUser(principal.getUsername());
+        if (user == null) {
+            return ResponseEntity.status(404).body(Map.of("error", "User not found"));
+        }
+
+        long userId = ((Number) user.get("id")).longValue();
+        long commentId;
+        try {
+            commentId = db.createComment(userId, targetType, parsedTargetId, text);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+            "id", commentId,
+            "targetType", targetType,
+            "targetId", parsedTargetId,
+            "text", text
+        ));
+    }
+}
+
+// ============================================================
 // PROFILE CONTROLLER
 // Returns a user's public profile and their ratings
 //
@@ -2307,6 +2412,7 @@ class ProfileController {
 
         // Build the profile response (don't include the password!)
         Map<String, Object> profile = new LinkedHashMap<>();
+        profile.put("userId", user.get("id"));
         profile.put("username",    user.get("username"));
         profile.put("displayName", user.get("displayName"));
         profile.put("avatarColor", user.get("avatarColor"));

@@ -260,6 +260,44 @@ const css = `
 
     .community-rating { font-size: 0.8rem; color: rgba(44,36,32,0.55); letter-spacing: 1px; margin-bottom: 1.5rem; }
     .community-rating strong { color: #d4744f; }
+    .comments-section { margin-top: 1.25rem; }
+    .comments-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
+    .comments-title { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 3px; color: rgba(44,36,32,0.4); }
+    .comments-count { font-size: 0.7rem; letter-spacing: 1px; text-transform: uppercase; color: rgba(44,36,32,0.45); }
+    .comments-list { display: grid; gap: 0.65rem; margin-bottom: 0.9rem; }
+    .comment-card { padding: 0.8rem 0.9rem; border-radius: 10px; background: rgba(255,255,255,0.6); border: 1px solid rgba(139,115,85,0.25); }
+    .comment-meta { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.45rem; flex-wrap: wrap; }
+    .comment-author { font-size: 0.8rem; font-weight: 700; color: #2c2420; }
+    .comment-author span { font-weight: 400; color: rgba(44,36,32,0.55); }
+    .comment-time { font-size: 0.65rem; letter-spacing: 1px; text-transform: uppercase; color: rgba(44,36,32,0.42); }
+    .comment-text { font-size: 0.86rem; line-height: 1.6; color: rgba(44,36,32,0.82); white-space: pre-wrap; }
+    .comment-form { display: grid; gap: 0.6rem; }
+    .comment-form textarea {
+        width: 100%; min-height: 92px; resize: vertical;
+        border: 1px solid rgba(139,115,85,0.45);
+        border-radius: 10px;
+        padding: 0.75rem 0.85rem;
+        background: rgba(255,255,255,0.75);
+        color: #2c2420;
+        font-family: inherit;
+    }
+    .comment-form textarea:focus { outline: none; border-color: #d4744f; background: rgba(255,255,255,0.95); }
+    .comment-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+    .comment-submit {
+        border: none;
+        background: linear-gradient(135deg, #d4744f 0%, #c26241 100%);
+        color: #f5f1ed;
+        border-radius: 999px;
+        font-size: 0.65rem;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        padding: 0.45rem 0.85rem;
+        cursor: pointer;
+    }
+    .comment-submit:disabled { opacity: 0.45; cursor: default; }
+    .comment-status { font-size: 0.72rem; color: rgba(44,36,32,0.55); }
+    .comment-status.error { color: #b44d33; }
+    .comment-empty { font-size: 0.8rem; color: rgba(44,36,32,0.45); padding: 0.5rem 0 0.25rem; }
 
     /* --- Star Rating --- */
     .stars { display: flex; gap: 8px; align-items: center; margin-bottom: 1.5rem; }
@@ -953,6 +991,20 @@ function formatReleaseYear(year) {
     return year && Number(year) > 0 ? year : "Unknown";
 }
 
+async function fetchComments(targetType, targetId) {
+    const data = await apiGet(`/comments?targetType=${encodeURIComponent(targetType)}&targetId=${encodeURIComponent(targetId)}`);
+    return data.comments || [];
+}
+
+function formatCommentTime(value) {
+    if (!value) return "";
+    try {
+        return new Date(value).toLocaleString();
+    } catch (e) {
+        return value;
+    }
+}
+
 // ============================================================
 // 4. PAGES
 // ============================================================
@@ -967,6 +1019,12 @@ function ShelfPage() {
     const [detail, setDetail]       = useState(null);
     const [myRating, setMyRating]   = useState(0);
     const [savedMsg, setSavedMsg]   = useState(false);
+    const [comments, setComments]   = useState([]);
+    const [commentsLoading, setCommentsLoading] = useState(false);
+    const [commentsError, setCommentsError] = useState("");
+    const [commentText, setCommentText] = useState("");
+    const [commentSaving, setCommentSaving] = useState(false);
+    const [commentSavedMsg, setCommentSavedMsg] = useState(false);
     const [selectedSong, setSelectedSong] = useState(null);
     const [lyricsSong, setLyricsSong] = useState(null);
     const [mainFilter, setMainFilter] = useState("albums");
@@ -1037,6 +1095,22 @@ function ShelfPage() {
     const focusedSong = songsMode
         ? (focusedAlbumDetail?.songs?.find(song => song.id === activeSong?.id) || activeSong || null)
         : null;
+    const commentTargetType = songsMode && focusedSong?.id ? "song" : "album";
+    const commentTargetId = songsMode && focusedSong?.id ? focusedSong.id : focusedAlbumId;
+
+    async function loadShelfComments(nextTargetType, nextTargetId, ignore = false) {
+        if (!nextTargetType || !nextTargetId) return;
+        setCommentsLoading(true);
+        setCommentsError("");
+        try {
+            const nextComments = await fetchComments(nextTargetType, nextTargetId);
+            if (!ignore) setComments(nextComments);
+        } catch (err) {
+            if (!ignore) setCommentsError(err.message || "Could not load comments");
+        } finally {
+            if (!ignore) setCommentsLoading(false);
+        }
+    }
 
     // Load detail + my rating whenever the currently focused album changes
     useEffect(() => {
@@ -1062,8 +1136,16 @@ function ShelfPage() {
                 .catch(() => {});
         }
 
+        loadShelfComments(commentTargetType, commentTargetId, ignore);
+
         return () => { ignore = true; };
-    }, [focusedAlbumId, focusedSong?.id, songsMode, user]);
+    }, [focusedAlbumId, commentTargetType, commentTargetId, focusedSong?.id, songsMode, user]);
+
+    useEffect(() => {
+        setCommentText("");
+        setCommentSavedMsg(false);
+        setCommentsError("");
+    }, [commentTargetType, commentTargetId]);
 
     useEffect(() => {
         if (songsMode) {
@@ -1136,6 +1218,32 @@ function ShelfPage() {
             setTimeout(() => setSavedMsg(false), 2500);
         } catch (err) {
             console.error(err);
+        }
+    }
+
+    async function handleSubmitComment(e) {
+        e.preventDefault();
+        if (!user || !commentTargetId || commentSaving) return;
+
+        const nextText = commentText.trim();
+        if (!nextText) return;
+
+        setCommentSaving(true);
+        setCommentsError("");
+        try {
+            await apiPost("/comments", {
+                targetType: commentTargetType,
+                targetId: commentTargetId,
+                text: nextText,
+            });
+            setCommentText("");
+            setCommentSavedMsg(true);
+            await loadShelfComments(commentTargetType, commentTargetId);
+            setTimeout(() => setCommentSavedMsg(false), 2500);
+        } catch (err) {
+            setCommentsError(err.message || "Could not save comment");
+        } finally {
+            setCommentSaving(false);
         }
     }
 
@@ -1375,6 +1483,53 @@ function ShelfPage() {
                                         <Link to="/login">Sign in</Link> to rate this {songsMode ? "song" : "album"}
                                     </div>
                                 )}
+
+                                <div className="comments-section">
+                                    <div className="comments-header">
+                                        <div className="comments-title">Comments</div>
+                                        <div className="comments-count">{comments.length} total</div>
+                                    </div>
+
+                                    {commentsLoading ? (
+                                        <div className="comment-empty">Loading comments...</div>
+                                    ) : comments.length === 0 ? (
+                                        <div className="comment-empty">No comments yet.</div>
+                                    ) : (
+                                        <div className="comments-list">
+                                            {comments.map(comment => (
+                                                <div key={comment.id} className="comment-card">
+                                                    <div className="comment-meta">
+                                                        <div className="comment-author">@{comment.username} <span>{comment.displayName || comment.username}</span></div>
+                                                        <div className="comment-time">{formatCommentTime(comment.updatedAt || comment.createdAt)}</div>
+                                                    </div>
+                                                    <div className="comment-text">{comment.text}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {user ? (
+                                        <form className="comment-form" onSubmit={handleSubmitComment}>
+                                            <textarea
+                                                value={commentText}
+                                                onChange={e => setCommentText(e.target.value)}
+                                                placeholder={`Write a comment on this ${commentTargetType}...`}
+                                                maxLength={500}
+                                            />
+                                            <div className="comment-actions">
+                                                <button className="comment-submit" disabled={commentSaving || !commentText.trim()} type="submit">
+                                                    {commentSaving ? "Posting..." : "Post Comment"}
+                                                </button>
+                                                {commentSavedMsg && <div className="comment-status">✓ Comment posted</div>}
+                                                {commentsError && <div className="comment-status error">{commentsError}</div>}
+                                            </div>
+                                        </form>
+                                    ) : (
+                                        <div className="sign-in-prompt" style={{ marginTop: "0.9rem" }}>
+                                            <Link to="/login">Sign in</Link> to comment on this {commentTargetType}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -1909,9 +2064,16 @@ function PublicPlaylistPage() {
 function ProfilePage() {
     const { username } = useParams();
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [comments, setComments] = useState([]);
+    const [commentsLoading, setCommentsLoading] = useState(false);
+    const [commentsError, setCommentsError] = useState("");
+    const [commentText, setCommentText] = useState("");
+    const [commentSaving, setCommentSaving] = useState(false);
+    const [commentSavedMsg, setCommentSavedMsg] = useState(false);
 
     useEffect(() => {
         apiGet("/profile/" + username)
@@ -1919,6 +2081,51 @@ function ProfilePage() {
             .catch(err => setError(err.message))
             .finally(() => setLoading(false));
     }, [username]);
+
+    useEffect(() => {
+        if (!profile?.userId) return;
+        let ignore = false;
+        setCommentsLoading(true);
+        setCommentsError("");
+        fetchComments("profile", profile.userId)
+            .then(nextComments => {
+                if (!ignore) setComments(nextComments);
+            })
+            .catch(err => {
+                if (!ignore) setCommentsError(err.message || "Could not load comments");
+            })
+            .finally(() => {
+                if (!ignore) setCommentsLoading(false);
+            });
+        return () => { ignore = true; };
+    }, [profile?.userId]);
+
+    async function handleSubmitComment(e) {
+        e.preventDefault();
+        if (!user || !profile?.userId || commentSaving) return;
+
+        const nextText = commentText.trim();
+        if (!nextText) return;
+
+        setCommentSaving(true);
+        setCommentsError("");
+        try {
+            await apiPost("/comments", {
+                targetType: "profile",
+                targetId: profile.userId,
+                text: nextText,
+            });
+            setCommentText("");
+            setCommentSavedMsg(true);
+            const nextComments = await fetchComments("profile", profile.userId);
+            setComments(nextComments);
+            setTimeout(() => setCommentSavedMsg(false), 2500);
+        } catch (err) {
+            setCommentsError(err.message || "Could not save comment");
+        } finally {
+            setCommentSaving(false);
+        }
+    }
 
     if (loading) return <div className="page loading">Loading profile...</div>;
     if (error || !profile) return <div className="page empty">Profile not found.</div>;
@@ -1938,6 +2145,53 @@ function ProfilePage() {
                     </div>
                     {profile.bio && <div style={{ marginTop: "0.5rem", color: "rgba(44,36,32,0.7)", maxWidth: 520 }}>{profile.bio}</div>}
                 </div>
+            </div>
+
+            <div className="comments-section">
+                <div className="comments-header">
+                    <div className="comments-title">Comments</div>
+                    <div className="comments-count">{comments.length} total</div>
+                </div>
+
+                {commentsLoading ? (
+                    <div className="comment-empty">Loading comments...</div>
+                ) : comments.length === 0 ? (
+                    <div className="comment-empty">No comments yet.</div>
+                ) : (
+                    <div className="comments-list">
+                        {comments.map(comment => (
+                            <div key={comment.id} className="comment-card">
+                                <div className="comment-meta">
+                                    <div className="comment-author">@{comment.username} <span>{comment.displayName || comment.username}</span></div>
+                                    <div className="comment-time">{formatCommentTime(comment.updatedAt || comment.createdAt)}</div>
+                                </div>
+                                <div className="comment-text">{comment.text}</div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {user ? (
+                    <form className="comment-form" onSubmit={handleSubmitComment}>
+                        <textarea
+                            value={commentText}
+                            onChange={e => setCommentText(e.target.value)}
+                            placeholder="Write a comment on this profile..."
+                            maxLength={500}
+                        />
+                        <div className="comment-actions">
+                            <button className="comment-submit" disabled={commentSaving || !commentText.trim()} type="submit">
+                                {commentSaving ? "Posting..." : "Post Comment"}
+                            </button>
+                            {commentSavedMsg && <div className="comment-status">✓ Comment posted</div>}
+                            {commentsError && <div className="comment-status error">{commentsError}</div>}
+                        </div>
+                    </form>
+                ) : (
+                    <div className="sign-in-prompt" style={{ marginTop: "0.9rem" }}>
+                        <Link to="/login">Sign in</Link> to comment on this profile
+                    </div>
+                )}
             </div>
 
             {/* Highest-Rated Songs */}
