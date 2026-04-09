@@ -40,31 +40,17 @@ Music-Shelf/
 ## Build and Run (Manual)
 From the repo root (`Music-Shelf`):
 
-```powershell
-Set-Location .\backend
-mvn clean install
-```
+To Start from scratch:
+Run.bat
 
-Then start the backend in IntelliJ:
-- Open the `backend` folder as a Maven project (it uses `backend/pom.xml`).
-- Wait for dependency sync.
-- Open `backend/src/main/java/com/elgooners/app/App.java` and run it with the green play button.
-
-Start the frontend in a separate terminal:
-
-```powershell
-Set-Location .\frontend
-npm install
-npm start
-```
-
-- Backend URL: `http://localhost:8080`
-- Frontend URL: `http://localhost:3000`
+To Start either the server or client seperately 
+run-backend.bat
+run-frontend.bat
 
 ## Unit Testing
 All tests are in `backend/src/test/java/com/elgooners/app/`.
 
-### Green tests (expected to pass)
+### Green tests
 
 ```powershell
 Set-Location .\backend
@@ -82,7 +68,9 @@ mvn -Dtest=Iteration3 test
 - Album ratings
 - User profiles
 - Playlist CRUD + song/album playlist actions
-- Admin user management endpoints
+- Admin user management of endpoints
+- User comments on songs/albums
+- 
 
 ## Troubleshooting
 - `mvn: command not found` -> install Maven and ensure it is in PATH.
