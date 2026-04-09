@@ -2102,6 +2102,8 @@ function ProfilePage() {
     const [commentSaving, setCommentSaving] = useState(false);
     const [commentSavedMsg, setCommentSavedMsg] = useState(false);
 
+    const [selectedStars, setSelectedStars] = useState("All");
+
     useEffect(() => {
         apiGet("/profile/" + username)
             .then(data => setProfile(data))
@@ -2157,6 +2159,18 @@ function ProfilePage() {
     if (loading) return <div className="page loading">Loading profile...</div>;
     if (error || !profile) return <div className="page empty">Profile not found.</div>;
 
+    const starOptions = ["All", 1, 2, 3, 4, 5];
+
+    function cycleStars() {
+        const currentIndex = starOptions.indexOf(selectedStars);
+        const nextIndex = (currentIndex + 1) % starOptions.length;
+        setSelectedStars(starOptions[nextIndex]);
+    }
+
+    const filteredRatings =
+        selectedStars === "All"
+            ? profile.ratings
+            : profile.ratings.filter(r => r.stars === selectedStars);
     const topSongs = (profile.songRatings || []).filter(s => s.stars >= 4);
 
     return (
@@ -2174,6 +2188,14 @@ function ProfilePage() {
                 </div>
             </div>
 
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                <div className="section-title">
+                    Rated Albums {selectedStars !== "All" ? `: ${selectedStars}★` : ""}
+                </div>
+                <button onClick={cycleStars} style={{ cursor: "pointer" }}>
+                    Filter Rating
+                </button>
+            </div>
             <div className="comments-section">
                 <div className="comments-header">
                     <div className="comments-title">Comments</div>
@@ -2263,17 +2285,18 @@ function ProfilePage() {
             {/* Rated Albums */}
             <div className="section-title" style={{ marginBottom: "1rem", marginTop: "1.5rem" }}>Rated Albums</div>
 
-            {profile.ratings.length === 0 && (
+            {filteredRatings.length === 0 && (
                 <div className="empty">No ratings yet.</div>
             )}
 
-            {profile.ratings.map((r, i) => (
+            {filteredRatings.map((r, i) => (
                 <div key={i} className="rating-row">
                     <div className="rating-art" style={{ background: `linear-gradient(135deg, ${r.color1}, ${r.color2})` }} />
                     <div>
                         <div className="rating-album-title">{r.title}</div>
                         <div className="rating-album-artist">
                             {r.artist}
+                            {r.year}
                             {r.updatedAt ? ` · rated ${new Date(r.updatedAt).toLocaleDateString()}` : ""}
                         </div>
                     </div>

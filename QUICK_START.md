@@ -25,7 +25,6 @@ mvn clean install
 
 ## 3) Run `App.java` Manually (green play button)
 In IntelliJ:
-
 1. Open `backend/src/main/java/com/elgooners/app/App.java`.
 2. Click the green play button next to `main`.
 3. Confirm backend is running at `http://localhost:8080`.
