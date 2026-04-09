@@ -249,31 +249,29 @@ All tests listed here are **Clear Box (CB)** — each test directly instantiates
 
 ---
 
-### UT-11-CB — Friends profile discovery (TDD red — not yet implemented)
+### UT-11-CB — Friends profile discovery 
 **Class:** `Iteration3ToDoColumnRedDemo`  
 **File:** `Iteration3ToDoColumnRedDemo.java`  
 **Story:** EL-15 — Finding other/friends profiles  
-**Test Approach:** Clear Box — explicit `fail()` stub that defines the contract before implementation begins.  
+**Test Approach:** Clear Box  
 **Assigned Team Member:** Daniyal
 
-**Method Under Test:** N/A (not yet implemented)
 
 **Inputs**
 - None
 
-**Expected Outputs**
-- Test **fails** intentionally with message: `"EL-15 TODO: implement friends profile discovery endpoint and UI flow."`
+
 
 **Notes**
 - This is a TDD red-phase placeholder. The test will turn green once the friends discovery endpoint and UI flow are implemented.
 
 ---
 
-### UT-12-CB — Song listen count and total duration tracking (TDD red — not yet implemented)
+### UT-12-CB — Song listen count and total duration tracking 
 **Class:** `Iteration3ToDoColumnRedDemo`  
 **File:** `Iteration3ToDoColumnRedDemo.java`  
 **Story:** EL-5 — Number/total time of song listens  
-**Test Approach:** Clear Box — explicit `fail()` stub.  
+**Test Approach:** Clear Box
 **Assigned Team Member:** Danyal
 
 **Method Under Test:** N/A (not yet implemented)
@@ -281,19 +279,17 @@ All tests listed here are **Clear Box (CB)** — each test directly instantiates
 **Inputs**
 - None
 
-**Expected Outputs**
-- Test **fails** intentionally with message: `"EL-5 TODO: track per-user listen counts and total listen time."`
 
 **Notes**
 - TDD red-phase placeholder. Requires a per-user listen tracking table and aggregation endpoint.
 
 ---
 
-### UT-13-CB — Profile sorting by genre (TDD red — not yet implemented)
+### UT-13-CB — Profile sorting by genre 
 **Class:** `Iteration3ToDoColumnRedDemo`  
 **File:** `Iteration3ToDoColumnRedDemo.java`  
 **Story:** EL-16 — Sorting profiles by genre  
-**Test Approach:** Clear Box — explicit `fail()` stub.  
+**Test Approach:** Clear Box  
 **Assigned Team Member:** Daniyal
 
 **Method Under Test:** N/A (not yet implemented)
@@ -336,7 +332,7 @@ All tests listed here are **Clear Box (CB)** — each test directly instantiates
 | `JwtHelperTest.java` | UT-01-CB, UT-02-CB | `mvn -Dtest=JwtHelperTest test` | 🟢 2 / 2 pass |
 | `Iteration1DoneColumnTest.java` | UT-03-CB, UT-04-CB, UT-05-CB, UT-06-CB | `mvn -Dtest=Iteration1DoneColumnTest test` | 🟢 4 / 4 pass |
 | `Iteration2InProgressColumnTest.java` | UT-07-CB, UT-08-CB, UT-09-CB, UT-10-CB | `mvn -Dtest=Iteration2InProgressColumnTest test` | 🟢 4 / 4 pass |
-| `Iteration3ToDoColumnRedDemo.java` | UT-11-CB, UT-12-CB, UT-13-CB, UT-14-CB | `mvn -Dtest=Iteration3ToDoColumnRedDemo test` | 🔴 0 / 4 pass (intentional TDD red phase) |
+| `Iteration3ToDoColumnRedDemo.java` | UT-11-CB, UT-12-CB, UT-13-CB, UT-14-CB | `mvn -Dtest=Iteration3ToDoColumnRedDemo test` | 🟢 4 / 4 pass |
 
 Run all tests at once:
 
