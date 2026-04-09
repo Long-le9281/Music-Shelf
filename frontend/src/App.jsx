@@ -1737,7 +1737,7 @@ function ProfilePage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const [selectedGenre, setSelectedGenre] = useState("All");
+    const [selectedStars, setSelectedStars] = useState("All");
 
     useEffect(() => {
         apiGet("/profile/" + username)
@@ -1749,18 +1749,18 @@ function ProfilePage() {
     if (loading) return <div className="page loading">Loading profile...</div>;
     if (error || !profile) return <div className="page empty">Profile not found.</div>;
 
-    const genres = ["All", ...new Set(profile.ratings.map(r => r.genre).filter(Boolean))];
+    const starOptions = ["All", 1, 2, 3, 4, 5];
 
-    function cycleGenre() {
-        const currentIndex = genres.indexOf(selectedGenre);
-        const nextIndex = (currentIndex + 1) % genres.length;
-        setSelectedGenre(genres[nextIndex]);
+    function cycleStars() {
+        const currentIndex = starOptions.indexOf(selectedStars);
+        const nextIndex = (currentIndex + 1) % starOptions.length;
+        setSelectedStars(starOptions[nextIndex]);
     }
 
     const filteredRatings =
-        selectedGenre === "All"
+        selectedStars === "All"
             ? profile.ratings
-            : profile.ratings.filter(r => r.genre === selectedGenre);
+            : profile.ratings.filter(r => r.stars === selectedStars);
 
     return (
         <div className="page profile-page">
@@ -1779,10 +1779,10 @@ function ProfilePage() {
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
                 <div className="section-title">
-                    Rated Albums {selectedGenre !== "All" ? `: ${selectedGenre}` : ""}
+                    Rated Albums {selectedStars !== "All" ? `: ${selectedStars}★` : ""}
                 </div>
-                <button onClick={cycleGenre} style={{ cursor: "pointer" }}>
-                    Filter Genre
+                <button onClick={cycleStars} style={{ cursor: "pointer" }}>
+                    Filter Rating
                 </button>
             </div>
 
@@ -1797,6 +1797,7 @@ function ProfilePage() {
                         <div className="rating-album-title">{r.title}</div>
                         <div className="rating-album-artist">
                             {r.artist}
+                            {r.year}
                             {r.updatedAt ? ` · rated ${new Date(r.updatedAt).toLocaleDateString()}` : ""}
                         </div>
                     </div>
