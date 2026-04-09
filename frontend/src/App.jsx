@@ -234,11 +234,11 @@ const css = `
     .stack-card-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: 1px; line-height: 1.1; color: #f5f1ed; }
     .stack-card-artist { font-size: 0.65rem; letter-spacing: 1px; text-transform: uppercase; opacity: 0.7; color: #d4a574; margin-top: 4px; }
 
-    .detail-panel { flex: 1; overflow: hidden; padding: 2.5rem 3rem; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .detail-shell { width: 100%; max-width: 900px; height: 100%; display: flex; flex-direction: column; min-height: 0; }
+    .detail-panel { flex: 1; overflow-y: auto; padding: 2.5rem 3rem; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
+    .detail-shell { width: 100%; max-width: 1200px; display: flex; flex-direction: column; }
 
-    .detail-top { display: flex; gap: 3rem; align-items: flex-start; margin-bottom: 2.5rem; max-width: 900px; width: 100%; }
-    .detail-scroll-region { flex: 1; min-height: 0; overflow-y: auto; padding-right: 0.4rem; }
+    .detail-top { display: flex; gap: 2rem; align-items: flex-start; margin-bottom: 2rem; width: 100%; }
+    .detail-scroll-region { padding-right: 0.4rem; margin-top: 0.5rem; }
 
     .album-cover {
         width: 260px; height: 260px; border-radius: 12px; flex-shrink: 0;
@@ -249,7 +249,18 @@ const css = `
         border: 3px solid #8b7355;
     }
 
-    .detail-info { flex: 1; max-width: 500px; }
+    .detail-info { flex: 1; min-width: 0; max-width: 440px; }
+    .comments-side-panel {
+        width: 290px;
+        flex-shrink: 0;
+        align-self: flex-start;
+        background: rgba(255,255,255,0.58);
+        border: 1px solid rgba(139,115,85,0.28);
+        border-radius: 12px;
+        padding: 1rem 1.1rem;
+        max-height: 500px;
+        overflow-y: auto;
+    }
     .detail-title { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; line-height: 1; letter-spacing: 2px; margin-bottom: 4px; color: #2c2420; }
     .detail-artist { font-size: 0.9rem; letter-spacing: 2px; text-transform: uppercase; color: rgba(44,36,32,0.55); margin-bottom: 1.5rem; }
 
@@ -260,6 +271,44 @@ const css = `
 
     .community-rating { font-size: 0.8rem; color: rgba(44,36,32,0.55); letter-spacing: 1px; margin-bottom: 1.5rem; }
     .community-rating strong { color: #d4744f; }
+    .comments-section { margin-top: 1.25rem; }
+    .comments-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
+    .comments-title { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 3px; color: rgba(44,36,32,0.4); }
+    .comments-count { font-size: 0.7rem; letter-spacing: 1px; text-transform: uppercase; color: rgba(44,36,32,0.45); }
+    .comments-list { display: grid; gap: 0.65rem; margin-bottom: 0.9rem; }
+    .comment-card { padding: 0.8rem 0.9rem; border-radius: 10px; background: rgba(255,255,255,0.6); border: 1px solid rgba(139,115,85,0.25); }
+    .comment-meta { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.45rem; flex-wrap: wrap; }
+    .comment-author { font-size: 0.8rem; font-weight: 700; color: #2c2420; }
+    .comment-author span { font-weight: 400; color: rgba(44,36,32,0.55); }
+    .comment-time { font-size: 0.65rem; letter-spacing: 1px; text-transform: uppercase; color: rgba(44,36,32,0.42); }
+    .comment-text { font-size: 0.86rem; line-height: 1.6; color: rgba(44,36,32,0.82); white-space: pre-wrap; }
+    .comment-form { display: grid; gap: 0.6rem; }
+    .comment-form textarea {
+        width: 100%; min-height: 92px; resize: vertical;
+        border: 1px solid rgba(139,115,85,0.45);
+        border-radius: 10px;
+        padding: 0.75rem 0.85rem;
+        background: rgba(255,255,255,0.75);
+        color: #2c2420;
+        font-family: inherit;
+    }
+    .comment-form textarea:focus { outline: none; border-color: #d4744f; background: rgba(255,255,255,0.95); }
+    .comment-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+    .comment-submit {
+        border: none;
+        background: linear-gradient(135deg, #d4744f 0%, #c26241 100%);
+        color: #f5f1ed;
+        border-radius: 999px;
+        font-size: 0.65rem;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        padding: 0.45rem 0.85rem;
+        cursor: pointer;
+    }
+    .comment-submit:disabled { opacity: 0.45; cursor: default; }
+    .comment-status { font-size: 0.72rem; color: rgba(44,36,32,0.55); }
+    .comment-status.error { color: #b44d33; }
+    .comment-empty { font-size: 0.8rem; color: rgba(44,36,32,0.45); padding: 0.5rem 0 0.25rem; }
 
     /* --- Star Rating --- */
     .stars { display: flex; gap: 8px; align-items: center; margin-bottom: 1.5rem; }
@@ -520,6 +569,61 @@ const css = `
         background: #fff;
     }
 
+    /* --- Navbar User Search --- */
+    .navbar-search { position: relative; margin: 0 0.25rem; }
+    .navbar-search-input {
+        padding: 0.32rem 0.75rem;
+        border-radius: 20px;
+        border: 1px solid rgba(245,241,237,0.2);
+        background: rgba(255,255,255,0.1);
+        color: #f5f1ed;
+        font-size: 0.73rem;
+        font-family: inherit;
+        width: 150px;
+        outline: none;
+        transition: all 0.2s;
+    }
+    .navbar-search-input::placeholder { color: rgba(245,241,237,0.38); }
+    .navbar-search-input:focus {
+        background: rgba(255,255,255,0.17);
+        border-color: rgba(245,241,237,0.45);
+        width: 190px;
+    }
+    .navbar-search-dropdown {
+        position: absolute;
+        top: calc(100% + 10px);
+        left: 0;
+        min-width: 230px;
+        background: #2c2420;
+        border: 1px solid #8b7355;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+        z-index: 200;
+        overflow: hidden;
+    }
+    .navbar-search-result {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        padding: 0.6rem 0.9rem;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+    .navbar-search-result:hover { background: rgba(139,115,85,0.28); }
+    .navbar-search-avatar {
+        width: 28px; height: 28px;
+        border-radius: 50%;
+        border: 2px solid #8b7355;
+        display: flex; align-items: center; justify-content: center;
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 0.9rem;
+        color: #f5f1ed;
+        flex-shrink: 0;
+    }
+    .navbar-search-name { font-size: 0.82rem; font-weight: 600; color: #f5f1ed; }
+    .navbar-search-sub { font-size: 0.67rem; color: rgba(245,241,237,0.48); margin-top: 1px; }
+    .navbar-search-empty { padding: 0.7rem 0.9rem; font-size: 0.78rem; color: rgba(245,241,237,0.45); }
+
     @media (max-width: 980px) {
         .detail-top { flex-direction: column; }
         .track-lyrics-layout { grid-template-columns: 1fr; }
@@ -537,6 +641,75 @@ function GlobalStyles() {
     return null;
 }
 
+// --- Navbar User Search ---
+function NavbarUserSearch() {
+    const [query, setQuery] = useState("");
+    const [results, setResults] = useState([]);
+    const [open, setOpen] = useState(false);
+    const [noResults, setNoResults] = useState(false);
+    const ref = useRef(null);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        function handleClick(e) {
+            if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+        }
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
+    }, []);
+
+    useEffect(() => {
+        if (!query.trim()) { setResults([]); setOpen(false); setNoResults(false); return; }
+        const timer = setTimeout(() => {
+            apiGet("/users/lookup?q=" + encodeURIComponent(query))
+                .then(data => {
+                    const users = data.users || [];
+                    setResults(users);
+                    setNoResults(users.length === 0);
+                    setOpen(true);
+                })
+                .catch(() => {});
+        }, 250);
+        return () => clearTimeout(timer);
+    }, [query]);
+
+    function goToProfile(username) {
+        setQuery("");
+        setResults([]);
+        setOpen(false);
+        setNoResults(false);
+        navigate("/profile/" + username);
+    }
+
+    return (
+        <div className="navbar-search" ref={ref}>
+            <input
+                className="navbar-search-input"
+                placeholder="Find a user…"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                onFocus={() => (results.length > 0 || noResults) && setOpen(true)}
+            />
+            {open && (
+                <div className="navbar-search-dropdown">
+                    {results.map(u => (
+                        <div key={u.username} className="navbar-search-result" onClick={() => goToProfile(u.username)}>
+                            <div className="navbar-search-avatar" style={{ background: u.avatarColor }}>
+                                {(u.displayName || u.username)[0].toUpperCase()}
+                            </div>
+                            <div>
+                                <div className="navbar-search-name">{u.displayName || u.username}</div>
+                                <div className="navbar-search-sub">@{u.username} · {u.ratingCount} ratings</div>
+                            </div>
+                        </div>
+                    ))}
+                    {noResults && <div className="navbar-search-empty">No users found</div>}
+                </div>
+            )}
+        </div>
+    );
+}
+
 // --- Navbar ---
 function Navbar() {
     const { user, logout } = useAuth();
@@ -549,6 +722,7 @@ function Navbar() {
                 <Link to="/">Shelf</Link>
                 <Link to="/search">Search</Link>
                 {user && <Link to="/playlists">Playlists</Link>}
+                <NavbarUserSearch />
                 {user ? (
                     <>
                         <Link to="/account">Account</Link>
@@ -828,6 +1002,20 @@ function formatReleaseYear(year) {
     return year && Number(year) > 0 ? year : "Unknown";
 }
 
+async function fetchComments(targetType, targetId) {
+    const data = await apiGet(`/comments?targetType=${encodeURIComponent(targetType)}&targetId=${encodeURIComponent(targetId)}`);
+    return data.comments || [];
+}
+
+function formatCommentTime(value) {
+    if (!value) return "";
+    try {
+        return new Date(value).toLocaleString();
+    } catch (e) {
+        return value;
+    }
+}
+
 // ============================================================
 // 4. PAGES
 // ============================================================
@@ -842,6 +1030,13 @@ function ShelfPage() {
     const [detail, setDetail]       = useState(null);
     const [myRating, setMyRating]   = useState(0);
     const [savedMsg, setSavedMsg]   = useState(false);
+    const [comments, setComments]   = useState([]);
+    const [commentsLoading, setCommentsLoading] = useState(false);
+    const [commentsError, setCommentsError] = useState("");
+    const [commentText, setCommentText] = useState("");
+    const [commentSaving, setCommentSaving] = useState(false);
+    const [commentSavedMsg, setCommentSavedMsg] = useState(false);
+    const [showComments, setShowComments] = useState(false);
     const [selectedSong, setSelectedSong] = useState(null);
     const [lyricsSong, setLyricsSong] = useState(null);
     const [mainFilter, setMainFilter] = useState("albums");
@@ -912,6 +1107,22 @@ function ShelfPage() {
     const focusedSong = songsMode
         ? (focusedAlbumDetail?.songs?.find(song => song.id === activeSong?.id) || activeSong || null)
         : null;
+    const commentTargetType = songsMode && focusedSong?.id ? "song" : "album";
+    const commentTargetId = songsMode && focusedSong?.id ? focusedSong.id : focusedAlbumId;
+
+    async function loadShelfComments(nextTargetType, nextTargetId, ignore = false) {
+        if (!nextTargetType || !nextTargetId) return;
+        setCommentsLoading(true);
+        setCommentsError("");
+        try {
+            const nextComments = await fetchComments(nextTargetType, nextTargetId);
+            if (!ignore) setComments(nextComments);
+        } catch (err) {
+            if (!ignore) setCommentsError(err.message || "Could not load comments");
+        } finally {
+            if (!ignore) setCommentsLoading(false);
+        }
+    }
 
     // Load detail + my rating whenever the currently focused album changes
     useEffect(() => {
@@ -937,8 +1148,17 @@ function ShelfPage() {
                 .catch(() => {});
         }
 
+        loadShelfComments(commentTargetType, commentTargetId, ignore);
+
         return () => { ignore = true; };
-    }, [focusedAlbumId, focusedSong?.id, songsMode, user]);
+    }, [focusedAlbumId, commentTargetType, commentTargetId, focusedSong?.id, songsMode, user]);
+
+    useEffect(() => {
+        setCommentText("");
+        setCommentSavedMsg(false);
+        setCommentsError("");
+        setShowComments(false);
+    }, [commentTargetType, commentTargetId]);
 
     useEffect(() => {
         if (songsMode) {
@@ -967,6 +1187,9 @@ function ShelfPage() {
         function onWheel(e) {
             const wheelTarget = e.target;
             if (wheelTarget instanceof Element && wheelTarget.closest(".track-scroll-region")) {
+                return;
+            }
+            if (wheelTarget instanceof Element && wheelTarget.closest(".detail-panel")) {
                 return;
             }
             e.preventDefault();
@@ -1014,6 +1237,32 @@ function ShelfPage() {
         }
     }
 
+    async function handleSubmitComment(e) {
+        e.preventDefault();
+        if (!user || !commentTargetId || commentSaving) return;
+
+        const nextText = commentText.trim();
+        if (!nextText) return;
+
+        setCommentSaving(true);
+        setCommentsError("");
+        try {
+            await apiPost("/comments", {
+                targetType: commentTargetType,
+                targetId: commentTargetId,
+                text: nextText,
+            });
+            setCommentText("");
+            setCommentSavedMsg(true);
+            await loadShelfComments(commentTargetType, commentTargetId);
+            setTimeout(() => setCommentSavedMsg(false), 2500);
+        } catch (err) {
+            setCommentsError(err.message || "Could not save comment");
+        } finally {
+            setCommentSaving(false);
+        }
+    }
+
     function syncSongSelection(song, { openModal = false } = {}) {
         if (!song) return;
 
@@ -1051,7 +1300,7 @@ function ShelfPage() {
     }
 
     if (loading) return <div className="page loading">LOADING RECORDS…</div>;
-    if (albums.length === 0) return <div className="page loading">No albums found. Run database/setup.py first.</div>;
+    if (albums.length === 0) return <div className="page loading">No albums found.</div>;
 
     const detailTitle = songsMode
         ? (focusedSong?.title || "Select a song")
@@ -1239,18 +1488,76 @@ function ShelfPage() {
                                             label={songsMode ? "Rate this song" : "Rate this album"}
                                         />
                                         {savedMsg && <div className="saved-msg">✓ Saved!</div>}
-                                        <div style={{ marginTop: "0.7rem" }}>
+                                        <div style={{ marginTop: "0.7rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                                             <button className="ghost-btn" onClick={openAlbumPlaylistModal}>
                                                 + Add Album Songs to Playlist
+                                            </button>
+                                            <button className="ghost-btn" onClick={() => setShowComments(v => !v)}>
+                                                {showComments ? "Hide Comments" : `Comments${comments.length > 0 ? ` (${comments.length})` : ""}`}
                                             </button>
                                         </div>
                                     </>
                                 ) : (
-                                    <div className="sign-in-prompt">
-                                        <Link to="/login">Sign in</Link> to rate this {songsMode ? "song" : "album"}
-                                    </div>
+                                    <>
+                                        <div className="sign-in-prompt">
+                                            <Link to="/login">Sign in</Link> to rate this {songsMode ? "song" : "album"}
+                                        </div>
+                                        <button className="ghost-btn" style={{ marginTop: "0.7rem" }} onClick={() => setShowComments(v => !v)}>
+                                            {showComments ? "Hide Comments" : `Comments${comments.length > 0 ? ` (${comments.length})` : ""}`}
+                                        </button>
+                                    </>
                                 )}
                             </div>
+
+                            {/* Comments side panel — appears to the right on click */}
+                            {showComments && (
+                                <div className="comments-side-panel">
+                                    <div className="comments-header">
+                                        <div className="comments-title">Comments</div>
+                                        <div className="comments-count">{comments.length} total</div>
+                                    </div>
+
+                                    {commentsLoading ? (
+                                        <div className="comment-empty">Loading comments...</div>
+                                    ) : comments.length === 0 ? (
+                                        <div className="comment-empty">No comments yet.</div>
+                                    ) : (
+                                        <div className="comments-list">
+                                            {comments.map(comment => (
+                                                <div key={comment.id} className="comment-card">
+                                                    <div className="comment-meta">
+                                                        <div className="comment-author">@{comment.username} <span>{comment.displayName || comment.username}</span></div>
+                                                        <div className="comment-time">{formatCommentTime(comment.updatedAt || comment.createdAt)}</div>
+                                                    </div>
+                                                    <div className="comment-text">{comment.text}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {user ? (
+                                        <form className="comment-form" onSubmit={handleSubmitComment}>
+                                            <textarea
+                                                value={commentText}
+                                                onChange={e => setCommentText(e.target.value)}
+                                                placeholder={`Write a comment on this ${commentTargetType}...`}
+                                                maxLength={500}
+                                            />
+                                            <div className="comment-actions">
+                                                <button className="comment-submit" disabled={commentSaving || !commentText.trim()} type="submit">
+                                                    {commentSaving ? "Posting..." : "Post Comment"}
+                                                </button>
+                                                {commentSavedMsg && <div className="comment-status">✓ Comment posted</div>}
+                                                {commentsError && <div className="comment-status error">{commentsError}</div>}
+                                            </div>
+                                        </form>
+                                    ) : (
+                                        <div className="sign-in-prompt" style={{ marginTop: "0.9rem" }}>
+                                            <Link to="/login">Sign in</Link> to comment on this {commentTargetType}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {/* Track list */}
@@ -1731,11 +2038,69 @@ function PlaylistDetailPage() {
 }
 
 // --- Profile Page ---
+function PublicPlaylistPage() {
+    const { username, id } = useParams();
+    const navigate = useNavigate();
+    const [playlist, setPlaylist] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        apiGet(`/profile/${username}/playlists/${id}`)
+            .then(data => setPlaylist(data))
+            .catch(() => {})
+            .finally(() => setLoading(false));
+    }, [username, id]);
+
+    if (loading) return <div className="page loading">Loading playlist...</div>;
+    if (!playlist) return <div className="page empty">Playlist not found.</div>;
+
+    return (
+        <div className="page playlist-detail-page">
+            <div className="playlist-back" onClick={() => navigate("/profile/" + username)}>← Back to @{username}</div>
+            <div className="playlist-detail-title">{playlist.name}</div>
+            {playlist.description && <p style={{ marginTop: "0.6rem", color: "rgba(44,36,32,0.65)" }}>{playlist.description}</p>}
+            <div className="playlist-detail-info" style={{ marginTop: "0.7rem" }}>
+                <span className="playlist-card-category" style={{ marginRight: "0.6rem" }}>{playlist.category}</span>
+                <span>{playlist.songs.length} {playlist.songs.length === 1 ? "song" : "songs"}</span>
+            </div>
+            <div style={{ marginTop: "1.5rem" }}>
+                {playlist.songs.length === 0 ? (
+                    <div className="empty">No songs in this playlist yet.</div>
+                ) : (
+                    <>
+                        <div className="section-title">Songs</div>
+                        {playlist.songs.map((song, idx) => (
+                            <div key={`${song.id}-${idx}`} className="track">
+                                <span className="track-num">{idx + 1}</span>
+                                <div style={{ flex: 1 }}>
+                                    <div className="track-title">{song.title}</div>
+                                    <div style={{ fontSize: "0.74rem", color: "rgba(44,36,32,0.55)", marginTop: "2px" }}>
+                                        {song.albumTitle} - {song.artist}
+                                    </div>
+                                </div>
+                                <span className="track-dur">{formatTime(song.durationSeconds)}</span>
+                            </div>
+                        ))}
+                    </>
+                )}
+            </div>
+        </div>
+    );
+}
+
 function ProfilePage() {
     const { username } = useParams();
+    const navigate = useNavigate();
+    const { user } = useAuth();
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [comments, setComments] = useState([]);
+    const [commentsLoading, setCommentsLoading] = useState(false);
+    const [commentsError, setCommentsError] = useState("");
+    const [commentText, setCommentText] = useState("");
+    const [commentSaving, setCommentSaving] = useState(false);
+    const [commentSavedMsg, setCommentSavedMsg] = useState(false);
 
     const [selectedStars, setSelectedStars] = useState("All");
 
@@ -1745,6 +2110,51 @@ function ProfilePage() {
             .catch(err => setError(err.message))
             .finally(() => setLoading(false));
     }, [username]);
+
+    useEffect(() => {
+        if (!profile?.userId) return;
+        let ignore = false;
+        setCommentsLoading(true);
+        setCommentsError("");
+        fetchComments("profile", profile.userId)
+            .then(nextComments => {
+                if (!ignore) setComments(nextComments);
+            })
+            .catch(err => {
+                if (!ignore) setCommentsError(err.message || "Could not load comments");
+            })
+            .finally(() => {
+                if (!ignore) setCommentsLoading(false);
+            });
+        return () => { ignore = true; };
+    }, [profile?.userId]);
+
+    async function handleSubmitComment(e) {
+        e.preventDefault();
+        if (!user || !profile?.userId || commentSaving) return;
+
+        const nextText = commentText.trim();
+        if (!nextText) return;
+
+        setCommentSaving(true);
+        setCommentsError("");
+        try {
+            await apiPost("/comments", {
+                targetType: "profile",
+                targetId: profile.userId,
+                text: nextText,
+            });
+            setCommentText("");
+            setCommentSavedMsg(true);
+            const nextComments = await fetchComments("profile", profile.userId);
+            setComments(nextComments);
+            setTimeout(() => setCommentSavedMsg(false), 2500);
+        } catch (err) {
+            setCommentsError(err.message || "Could not save comment");
+        } finally {
+            setCommentSaving(false);
+        }
+    }
 
     if (loading) return <div className="page loading">Loading profile...</div>;
     if (error || !profile) return <div className="page empty">Profile not found.</div>;
@@ -1761,6 +2171,7 @@ function ProfilePage() {
         selectedStars === "All"
             ? profile.ratings
             : profile.ratings.filter(r => r.stars === selectedStars);
+    const topSongs = (profile.songRatings || []).filter(s => s.stars >= 4);
 
     return (
         <div className="page profile-page">
@@ -1785,6 +2196,94 @@ function ProfilePage() {
                     Filter Rating
                 </button>
             </div>
+            <div className="comments-section">
+                <div className="comments-header">
+                    <div className="comments-title">Comments</div>
+                    <div className="comments-count">{comments.length} total</div>
+                </div>
+
+                {commentsLoading ? (
+                    <div className="comment-empty">Loading comments...</div>
+                ) : comments.length === 0 ? (
+                    <div className="comment-empty">No comments yet.</div>
+                ) : (
+                    <div className="comments-list">
+                        {comments.map(comment => (
+                            <div key={comment.id} className="comment-card">
+                                <div className="comment-meta">
+                                    <div className="comment-author">@{comment.username} <span>{comment.displayName || comment.username}</span></div>
+                                    <div className="comment-time">{formatCommentTime(comment.updatedAt || comment.createdAt)}</div>
+                                </div>
+                                <div className="comment-text">{comment.text}</div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {user ? (
+                    <form className="comment-form" onSubmit={handleSubmitComment}>
+                        <textarea
+                            value={commentText}
+                            onChange={e => setCommentText(e.target.value)}
+                            placeholder="Write a comment on this profile..."
+                            maxLength={500}
+                        />
+                        <div className="comment-actions">
+                            <button className="comment-submit" disabled={commentSaving || !commentText.trim()} type="submit">
+                                {commentSaving ? "Posting..." : "Post Comment"}
+                            </button>
+                            {commentSavedMsg && <div className="comment-status">✓ Comment posted</div>}
+                            {commentsError && <div className="comment-status error">{commentsError}</div>}
+                        </div>
+                    </form>
+                ) : (
+                    <div className="sign-in-prompt" style={{ marginTop: "0.9rem" }}>
+                        <Link to="/login">Sign in</Link> to comment on this profile
+                    </div>
+                )}
+            </div>
+
+            {/* Highest-Rated Songs */}
+            {topSongs.length > 0 && (
+                <>
+                    <div className="section-title" style={{ marginBottom: "1rem", marginTop: "1.5rem" }}>Highest-Rated Songs</div>
+                    {topSongs.map((s, i) => (
+                        <div key={i} className="rating-row">
+                            <div className="rating-art" style={{
+                                background: s.albumArtUrl
+                                    ? `center/cover no-repeat url(${s.albumArtUrl})`
+                                    : `linear-gradient(135deg, ${s.color1}, ${s.color2})`
+                            }} />
+                            <div>
+                                <div className="rating-album-title">{s.title}</div>
+                                <div className="rating-album-artist">{s.artist} · {s.albumTitle}</div>
+                            </div>
+                            <div className="rating-stars">{"★".repeat(s.stars)}</div>
+                        </div>
+                    ))}
+                </>
+            )}
+
+            {/* Playlists */}
+            {(profile.playlists || []).length > 0 && (
+                <>
+                    <div className="section-title" style={{ marginBottom: "1rem", marginTop: "1.5rem" }}>Playlists</div>
+                    {profile.playlists.map(p => (
+                        <div key={p.id} className="playlist-card" style={{ cursor: "pointer" }}
+                            onClick={() => navigate("/profile/" + username + "/playlists/" + p.id)}>
+                            <div className="playlist-card-title">{p.name}</div>
+                            {p.description && <div style={{ fontSize: "0.84rem", color: "rgba(44,36,32,0.62)", marginBottom: "0.4rem" }}>{p.description}</div>}
+                            <div className="playlist-card-info">
+                                <span className="playlist-card-category" style={{ marginRight: "0.6rem" }}>{p.category}</span>
+                                <span>{p.songCount} {p.songCount === 1 ? "song" : "songs"}</span>
+                            </div>
+                        </div>
+                    ))}
+                </>
+            )}
+
+            {/* Rated Albums */}
+            <div className="section-title" style={{ marginBottom: "1rem", marginTop: "1.5rem" }}>Rated Albums</div>
 
             {filteredRatings.length === 0 && (
                 <div className="empty">No ratings yet.</div>
@@ -1818,6 +2317,9 @@ function AccountPage() {
     const [adminUsers, setAdminUsers] = useState([]);
     const [promotionCode, setPromotionCode] = useState("");
     const [message, setMessage] = useState("");
+    const [bioInput, setBioInput] = useState("");
+    const [bioSaving, setBioSaving] = useState(false);
+    const [bioEditing, setBioEditing] = useState(false);
     const [createForm, setCreateForm] = useState({
         username: "",
         password: "",
@@ -1835,6 +2337,7 @@ function AccountPage() {
         apiGet("/profile/me?historyLimit=12")
             .then((data) => {
                 setAccount(data);
+                setBioInput(data.bio || "");
                 patchUser({
                     displayName: data.displayName || data.username,
                     avatarColor: data.avatarColor,
@@ -1844,7 +2347,7 @@ function AccountPage() {
                 });
             })
             .catch((err) => setMessage(err.message));
-    }, [user]);
+    }, [user?.username]);
 
     async function refreshAdminUsers() {
         if (!account?.isAdmin) return;
@@ -1872,6 +2375,22 @@ function AccountPage() {
             setLookupUsers(data.users || []);
         } catch (err) {
             setMessage(err.message);
+        }
+    }
+
+    async function saveBio() {
+        if (bioSaving) return;
+        setBioSaving(true);
+        try {
+            const data = await apiPut("/profile/me/bio", { bio: bioInput });
+            setAccount(prev => prev ? { ...prev, bio: data.bio } : prev);
+            patchUser({ bio: data.bio });
+            setBioEditing(false);
+            setMessage("Bio updated!");
+        } catch (err) {
+            setMessage(err.message);
+        } finally {
+            setBioSaving(false);
         }
     }
 
@@ -1970,42 +2489,46 @@ function AccountPage() {
                             <div style={{ fontSize: "0.8rem", color: "rgba(44,36,32,0.6)" }}>@{account.username} {account.isAdmin ? "· admin" : ""}</div>
                         </div>
                     </div>
-                    {account.bio && <div style={{ marginTop: "0.75rem", color: "rgba(44,36,32,0.75)" }}>{account.bio}</div>}
+                    {account.bio && !bioEditing && <div style={{ marginTop: "0.75rem", color: "rgba(44,36,32,0.75)" }}>{account.bio}</div>}
+                    {!account.bio && !bioEditing && <div style={{ marginTop: "0.75rem", color: "rgba(44,36,32,0.4)", fontSize: "0.85rem" }}>No bio yet.</div>}
+                    {bioEditing ? (
+                        <div style={{ marginTop: "1rem" }}>
+                            <div style={{ fontSize: "0.78rem", color: "rgba(44,36,32,0.55)", marginBottom: "0.35rem" }}>{bioInput.length}/300</div>
+                            <textarea
+                                autoFocus
+                                value={bioInput}
+                                onChange={e => setBioInput(e.target.value.slice(0, 300))}
+                                placeholder="Tell people about yourself…"
+                                rows={3}
+                                style={{
+                                    width: "100%", boxSizing: "border-box",
+                                    borderRadius: 8, border: "1px solid rgba(139,115,85,0.4)",
+                                    background: "rgba(255,255,255,0.7)", padding: "0.5rem 0.7rem",
+                                    fontFamily: "inherit", fontSize: "0.85rem", resize: "vertical",
+                                    color: "#2c2420", outline: "none",
+                                }}
+                            />
+                            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.4rem" }}>
+                                <button className="ghost-btn" onClick={saveBio} disabled={bioSaving}>
+                                    {bioSaving ? "Saving…" : "Update Bio"}
+                                </button>
+                                <button className="ghost-btn" onClick={() => { setBioEditing(false); setBioInput(account.bio || ""); }} disabled={bioSaving}>
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button
+                            className="ghost-btn"
+                            onClick={() => { setBioInput(account.bio || ""); setBioEditing(true); }}
+                            style={{ marginTop: "0.75rem" }}
+                        >Edit Bio</button>
+                    )}
                 </div>
             )}
 
             <div className="account-grid">
-                <div className="account-card">
-                    <h3>Lookup Users</h3>
-                    <div className="inline-form">
-                        <input
-                            value={lookupQuery}
-                            onChange={(e) => {
-                                setLookupQuery(e.target.value);
-                                setLookupAttempted(false);
-                            }}
-                            placeholder="Search by username or display name"
-                        />
-                        <button className="ghost-btn" onClick={runLookup}>Find</button>
-                    </div>
-                    <div style={{ marginTop: "0.9rem" }}>
-                        {lookupUsers.map((u) => (
-                            <div className="lookup-row" key={u.username}>
-                                <div className="lookup-avatar" style={{ background: u.avatarColor }} />
-                                <div>
-                                    <div style={{ fontSize: "0.85rem", fontWeight: 600 }}>{u.displayName || u.username}</div>
-                                    <div style={{ fontSize: "0.73rem", color: "rgba(44,36,32,0.55)" }}>@{u.username} · {u.ratingCount} ratings</div>
-                                </div>
-                                {u.isAdmin && <span className="admin-pill">Admin</span>}
-                            </div>
-                        ))}
-                        {lookupAttempted && lookupQuery.trim() && lookupUsers.length === 0 && (
-                            <div className="empty" style={{ padding: "1rem 0" }}>No matching users.</div>
-                        )}
-                    </div>
-                </div>
-
-                <div className="account-card">
+                <div className="account-card" style={{ gridColumn: "1 / -1" }}>
                     <h3>Promotion + History</h3>
                     {!account?.isAdmin && (
                         <>
@@ -2210,6 +2733,7 @@ export default function App() {
                     <Route path="/search"             element={<SearchPage />} />
                     <Route path="/playlists"          element={<PlaylistsPage />} />
                     <Route path="/playlists/:id"      element={<PlaylistDetailPage />} />
+                    <Route path="/profile/:username/playlists/:id" element={<PublicPlaylistPage />} />
                     <Route path="/account"            element={<AccountPage />} />
                     <Route path="/profile/:username"  element={<ProfilePage />} />
                     <Route path="/signup"             element={<SignupPage />} />

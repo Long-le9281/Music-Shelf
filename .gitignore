@@ -14,3 +14,4 @@ __pycache__/
 # Runtime database artifacts
 database/recordshelf.db
 database/*.db
+

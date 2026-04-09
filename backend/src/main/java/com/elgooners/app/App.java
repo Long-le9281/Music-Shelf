@@ -366,6 +366,10 @@ class Database {
         return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
     }
 
+    private String normalizeCommentTargetType(String targetType) {
+        return targetType == null ? "" : targetType.trim().toLowerCase(Locale.ROOT);
+    }
+
     private List<String> parseCsvLine(String line) {
         ArrayList<String> values = new ArrayList<>();
         if (line == null) return values;
@@ -487,11 +491,27 @@ class Database {
                     UNIQUE(playlist_id, song_id)
                 )
                 """);
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS comments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    target_type TEXT NOT NULL,
+                    target_id INTEGER NOT NULL,
+                    text TEXT NOT NULL,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+                """);
             // Migrate older playlist schemas that were created before these columns existed.
             addColumnIfMissing(conn, "playlists", "description", "TEXT DEFAULT ''");
             addColumnIfMissing(conn, "playlists", "category", "TEXT DEFAULT 'Custom'");
             addColumnIfMissing(conn, "playlists", "created_at", "TEXT DEFAULT CURRENT_TIMESTAMP");
             addColumnIfMissing(conn, "playlist_songs", "created_at", "TEXT DEFAULT CURRENT_TIMESTAMP");
+            addColumnIfMissing(conn, "comments", "target_type", "TEXT");
+            addColumnIfMissing(conn, "comments", "target_id", "INTEGER");
+            addColumnIfMissing(conn, "comments", "text", "TEXT");
+            addColumnIfMissing(conn, "comments", "created_at", "TEXT");
+            addColumnIfMissing(conn, "comments", "updated_at", "TEXT");
             stmt.execute("UPDATE users SET created_at = COALESCE(NULLIF(created_at, ''), CURRENT_TIMESTAMP)");
             stmt.execute("UPDATE users SET display_name = COALESCE(NULLIF(display_name, ''), username)");
             stmt.execute("UPDATE users SET bio = COALESCE(bio, '')");
@@ -501,11 +521,15 @@ class Database {
             stmt.execute("UPDATE albums SET release_year = 0 WHERE release_year IS NULL OR release_year < 1880 OR release_year > " + (Year.now().getValue() + 1));
             stmt.execute("UPDATE ratings SET updated_at = COALESCE(NULLIF(updated_at, ''), CURRENT_TIMESTAMP)");
             stmt.execute("UPDATE song_ratings SET updated_at = COALESCE(NULLIF(updated_at, ''), CURRENT_TIMESTAMP)");
+            stmt.execute("UPDATE comments SET created_at = COALESCE(NULLIF(created_at, ''), CURRENT_TIMESTAMP)");
+            stmt.execute("UPDATE comments SET updated_at = COALESCE(NULLIF(updated_at, ''), CURRENT_TIMESTAMP)");
             stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_album_identity ON albums(title, artist)");
             stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_song_identity ON songs(album_id, track_number, title)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_song_ratings_song ON song_ratings(song_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_playlists_user ON playlists(user_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_playlist_songs_playlist ON playlist_songs(playlist_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_comments_target ON comments(target_type, target_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_comments_user ON comments(user_id)");
         } catch (SQLException e) {
             System.out.println("Error ensuring schema: " + e.getMessage());
         }
@@ -1179,6 +1203,25 @@ class Database {
         }
     }
 
+    private boolean userExists(Connection conn, long userId) throws SQLException {
+        try (PreparedStatement stmt = conn.prepareStatement("SELECT id FROM users WHERE id = ?")) {
+            stmt.setLong(1, userId);
+            return stmt.executeQuery().next();
+        }
+    }
+
+    void updateBio(long userId, String bio) {
+        String sql = "UPDATE users SET bio = ? WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, bio);
+            stmt.setLong(2, userId);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not update bio: " + e.getMessage());
+        }
+    }
+
     long createPlaylist(long userId, String name, String description, String category) {
         String sql = "INSERT INTO playlists (user_id, name, description, category) VALUES (?, ?, ?, ?)";
         try (Connection conn = getConnection();
@@ -1225,6 +1268,57 @@ class Database {
             throw new RuntimeException("Could not get playlists: " + e.getMessage());
         }
         return playlists;
+    }
+
+    Map<String, Object> getPlaylistByIdPublic(long playlistId) {
+        String playlistSql = """
+            SELECT id, name, description, category, created_at
+            FROM playlists
+            WHERE id = ?
+            """;
+        String songsSql = """
+            SELECT s.id, s.title, s.track_number, s.duration_seconds,
+                   a.id AS album_id, a.title AS album_title, a.artist
+            FROM playlist_songs ps
+            JOIN songs s ON s.id = ps.song_id
+            LEFT JOIN albums a ON a.id = s.album_id
+            WHERE ps.playlist_id = ?
+            ORDER BY ps.id DESC
+            """;
+        try (Connection conn = getConnection();
+             PreparedStatement playlistStmt = conn.prepareStatement(playlistSql);
+             PreparedStatement songsStmt = conn.prepareStatement(songsSql)) {
+            playlistStmt.setLong(1, playlistId);
+            ResultSet playlistRs = playlistStmt.executeQuery();
+            if (!playlistRs.next()) return null;
+
+            Map<String, Object> playlist = new HashMap<>();
+            playlist.put("id", playlistRs.getLong("id"));
+            playlist.put("name", playlistRs.getString("name"));
+            playlist.put("description", playlistRs.getString("description"));
+            playlist.put("category", playlistRs.getString("category"));
+            playlist.put("createdAt", playlistRs.getString("created_at"));
+
+            songsStmt.setLong(1, playlistId);
+            ResultSet songsRs = songsStmt.executeQuery();
+            List<Map<String, Object>> songs = new ArrayList<>();
+            while (songsRs.next()) {
+                Map<String, Object> song = new HashMap<>();
+                song.put("id", songsRs.getLong("id"));
+                song.put("title", songsRs.getString("title"));
+                song.put("trackNumber", songsRs.getInt("track_number"));
+                song.put("durationSeconds", songsRs.getInt("duration_seconds"));
+                song.put("albumId", songsRs.getLong("album_id"));
+                song.put("albumTitle", songsRs.getString("album_title"));
+                song.put("artist", songsRs.getString("artist"));
+                songs.add(song);
+            }
+            playlist.put("songs", songs);
+            playlist.put("songCount", songs.size());
+            return playlist;
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not get playlist: " + e.getMessage());
+        }
     }
 
     Map<String, Object> getPlaylistByIdForUser(long playlistId, long userId) {
@@ -1425,6 +1519,30 @@ class Database {
         return false;
     }
 
+    boolean albumExists(long albumId) {
+        String sql = "SELECT 1 FROM albums WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, albumId);
+            return stmt.executeQuery().next();
+        } catch (SQLException e) {
+            System.out.println("Error checking album: " + e.getMessage());
+        }
+        return false;
+    }
+
+    boolean userExists(long userId) {
+        String sql = "SELECT 1 FROM users WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, userId);
+            return stmt.executeQuery().next();
+        } catch (SQLException e) {
+            System.out.println("Error checking user: " + e.getMessage());
+        }
+        return false;
+    }
+
     void saveSongRating(long userId, long songId, int stars) {
         String sql = """
             INSERT INTO song_ratings (user_id, song_id, stars, updated_at)
@@ -1489,6 +1607,43 @@ class Database {
         return ratings;
     }
 
+    // Get all song ratings a user has given, sorted by highest stars first
+    List<Map<String, Object>> getSongRatingsByUser(long userId) {
+        String sql = """
+            SELECT sr.stars, sr.updated_at, s.id AS song_id, s.title, s.track_number,
+                   a.title AS album_title, a.artist, a.color1, a.color2, a.album_art_url
+            FROM song_ratings sr
+            JOIN songs s ON s.id = sr.song_id
+            JOIN albums a ON a.id = s.album_id
+            WHERE sr.user_id = ?
+            ORDER BY sr.stars DESC, COALESCE(sr.updated_at, '') DESC
+            LIMIT 20
+            """;
+        List<Map<String, Object>> ratings = new ArrayList<>();
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, userId);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                Map<String, Object> rating = new HashMap<>();
+                rating.put("stars",       rs.getInt("stars"));
+                rating.put("songId",      rs.getLong("song_id"));
+                rating.put("title",       rs.getString("title"));
+                rating.put("trackNumber", rs.getInt("track_number"));
+                rating.put("albumTitle",  rs.getString("album_title"));
+                rating.put("artist",      rs.getString("artist"));
+                rating.put("color1",      rs.getString("color1"));
+                rating.put("color2",      rs.getString("color2"));
+                rating.put("albumArtUrl", rs.getString("album_art_url"));
+                rating.put("updatedAt",   rs.getString("updated_at"));
+                ratings.add(rating);
+            }
+        } catch (SQLException e) {
+            System.out.println("Error getting user song ratings: " + e.getMessage());
+        }
+        return ratings;
+    }
+
     List<Map<String, Object>> getRecentHistory(long userId, int limit) {
         String sql = """
             SELECT r.stars, r.updated_at, a.id AS album_id, a.title, a.artist, a.color1, a.color2
@@ -1519,6 +1674,95 @@ class Database {
             System.out.println("Error getting account history: " + e.getMessage());
         }
         return history;
+    }
+
+    private boolean commentTargetExists(Connection conn, String targetType, long targetId) throws SQLException {
+        return switch (normalizeCommentTargetType(targetType)) {
+            case "album" -> albumExists(conn, targetId);
+            case "song" -> songExists(conn, targetId);
+            case "profile" -> userExists(conn, targetId);
+            default -> false;
+        };
+    }
+
+    private Map<String, Object> mapCommentRow(ResultSet rs) throws SQLException {
+        Map<String, Object> comment = new LinkedHashMap<>();
+        comment.put("id", rs.getLong("id"));
+        comment.put("userId", rs.getLong("user_id"));
+        comment.put("username", rs.getString("username"));
+        comment.put("displayName", rs.getString("display_name"));
+        comment.put("avatarColor", rs.getString("avatar_color"));
+        comment.put("targetType", rs.getString("target_type"));
+        comment.put("targetId", rs.getLong("target_id"));
+        comment.put("text", rs.getString("text"));
+        comment.put("createdAt", rs.getString("created_at"));
+        comment.put("updatedAt", rs.getString("updated_at"));
+        return comment;
+    }
+
+    long createComment(long userId, String targetType, long targetId, String text) {
+        String normalizedType = normalizeCommentTargetType(targetType);
+        if (!Set.of("album", "song", "profile").contains(normalizedType)) {
+            throw new IllegalArgumentException("Unsupported comment target type: " + targetType);
+        }
+
+        String cleanText = text == null ? "" : text.trim();
+        if (cleanText.isBlank()) {
+            throw new IllegalArgumentException("Comment text cannot be blank");
+        }
+
+        String sql = """
+            INSERT INTO comments (user_id, target_type, target_id, text, created_at, updated_at)
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            """;
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            stmt.setLong(1, userId);
+            stmt.setString(2, normalizedType);
+            stmt.setLong(3, targetId);
+            stmt.setString(4, cleanText);
+            stmt.executeUpdate();
+            ResultSet keys = stmt.getGeneratedKeys();
+            if (keys.next()) return keys.getLong(1);
+            throw new RuntimeException("Comment insert succeeded but no ID returned");
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not create comment: " + e.getMessage());
+        }
+    }
+
+    List<Map<String, Object>> getCommentsByTarget(String targetType, long targetId) {
+        String normalizedType = normalizeCommentTargetType(targetType);
+        String sql = """
+            SELECT c.id, c.user_id, c.target_type, c.target_id, c.text, c.created_at, c.updated_at,
+                   u.username, u.avatar_color,
+                   COALESCE(u.display_name, u.username) AS display_name
+            FROM comments c
+            JOIN users u ON u.id = c.user_id
+            WHERE c.target_type = ? AND c.target_id = ?
+            ORDER BY COALESCE(c.updated_at, c.created_at, '') DESC, c.id DESC
+            """;
+        List<Map<String, Object>> comments = new ArrayList<>();
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, normalizedType);
+            stmt.setLong(2, targetId);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                comments.add(mapCommentRow(rs));
+            }
+        } catch (SQLException e) {
+            System.out.println("Error getting comments: " + e.getMessage());
+        }
+        return comments;
+    }
+
+    boolean commentTargetExists(String targetType, long targetId) {
+        try (Connection conn = getConnection()) {
+            return commentTargetExists(conn, targetType, targetId);
+        } catch (SQLException e) {
+            System.out.println("Error checking comment target: " + e.getMessage());
+            return false;
+        }
     }
 
     private String buildFallbackLyrics(String title) {
@@ -1660,6 +1904,7 @@ class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/search/add").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/profile/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/users/lookup").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/comments").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 // Everything else requires the user to be logged in
                 .anyRequest().authenticated()
@@ -2040,6 +2285,107 @@ class RatingController {
 }
 
 // ============================================================
+// COMMENT CONTROLLER
+// Public read, authenticated write for album/song/profile comments.
+//
+// GET  /api/comments?targetType=album|song|profile&targetId=123
+// POST /api/comments { "targetType": "album", "targetId": 1, "text": "Great record" }
+// ============================================================
+
+@RestController
+@RequestMapping("/api/comments")
+class CommentController {
+
+    @Autowired Database db;
+
+    @GetMapping
+    public ResponseEntity<?> getComments(@RequestParam(defaultValue = "") String targetType,
+                                         @RequestParam(defaultValue = "") String targetId) {
+        String normalizedType = targetType.trim().toLowerCase(Locale.ROOT);
+        if (!Set.of("album", "song", "profile").contains(normalizedType)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "targetType must be one of: album, song, profile"));
+        }
+
+        long parsedTargetId;
+        try {
+            parsedTargetId = Long.parseLong(targetId.trim());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "targetId must be a positive integer"));
+        }
+        if (parsedTargetId <= 0) {
+            return ResponseEntity.badRequest().body(Map.of("error", "targetId must be a positive integer"));
+        }
+
+        if (!db.commentTargetExists(normalizedType, parsedTargetId)) {
+            return ResponseEntity.status(404).body(Map.of("error", "Comment target not found"));
+        }
+
+        List<Map<String, Object>> comments = db.getCommentsByTarget(normalizedType, parsedTargetId);
+        return ResponseEntity.ok(Map.of(
+            "targetType", normalizedType,
+            "targetId", parsedTargetId,
+            "count", comments.size(),
+            "comments", comments
+        ));
+    }
+
+    @PostMapping
+    public ResponseEntity<?> createComment(@RequestBody Map<String, Object> body,
+                                           @AuthenticationPrincipal UserDetails principal) {
+        if (principal == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+        }
+
+        String targetType = String.valueOf(body.getOrDefault("targetType", "")).trim().toLowerCase(Locale.ROOT);
+        if (!Set.of("album", "song", "profile").contains(targetType)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "targetType must be one of: album, song, profile"));
+        }
+
+        long parsedTargetId;
+        try {
+            parsedTargetId = Long.parseLong(String.valueOf(body.getOrDefault("targetId", "")).trim());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "targetId must be a positive integer"));
+        }
+        if (parsedTargetId <= 0) {
+            return ResponseEntity.badRequest().body(Map.of("error", "targetId must be a positive integer"));
+        }
+
+        String text = String.valueOf(body.getOrDefault("text", "")).trim();
+        if (text.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Comment text cannot be blank"));
+        }
+        if (text.length() > 500) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Comment text must be 500 characters or fewer"));
+        }
+
+        if (!db.commentTargetExists(targetType, parsedTargetId)) {
+            return ResponseEntity.status(404).body(Map.of("error", "Comment target not found"));
+        }
+
+        Map<String, Object> user = db.findUser(principal.getUsername());
+        if (user == null) {
+            return ResponseEntity.status(404).body(Map.of("error", "User not found"));
+        }
+
+        long userId = ((Number) user.get("id")).longValue();
+        long commentId;
+        try {
+            commentId = db.createComment(userId, targetType, parsedTargetId, text);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+            "id", commentId,
+            "targetType", targetType,
+            "targetId", parsedTargetId,
+            "text", text
+        ));
+    }
+}
+
+// ============================================================
 // PROFILE CONTROLLER
 // Returns a user's public profile and their ratings
 //
@@ -2061,9 +2407,12 @@ class ProfileController {
 
         long userId = ((Number) user.get("id")).longValue();
         List<Map<String, Object>> ratings = db.getRatingsByUser(userId);
+        List<Map<String, Object>> songRatings = db.getSongRatingsByUser(userId);
+        List<Map<String, Object>> playlists = db.getPlaylistsByUser(userId);
 
         // Build the profile response (don't include the password!)
         Map<String, Object> profile = new LinkedHashMap<>();
+        profile.put("userId", user.get("id"));
         profile.put("username",    user.get("username"));
         profile.put("displayName", user.get("displayName"));
         profile.put("avatarColor", user.get("avatarColor"));
@@ -2072,8 +2421,23 @@ class ProfileController {
         profile.put("isAdmin", user.getOrDefault("isAdmin", false));
         profile.put("ratingCount", ratings.size());
         profile.put("ratings",     ratings);
+        profile.put("songRatings", songRatings);
+        profile.put("playlists",   playlists);
 
         return ResponseEntity.ok(profile);
+    }
+
+    @GetMapping("/{username}/playlists/{playlistId}")
+    public ResponseEntity<?> getPublicPlaylist(@PathVariable String username,
+                                               @PathVariable long playlistId) {
+        Map<String, Object> user = db.findUser(username);
+        if (user == null || user.get("deletedAt") != null || Boolean.FALSE.equals(user.get("isActive"))) {
+            return ResponseEntity.notFound().build();
+        }
+        long userId = ((Number) user.get("id")).longValue();
+        Map<String, Object> playlist = db.getPlaylistByIdForUser(playlistId, userId);
+        if (playlist == null) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(playlist);
     }
 
     @GetMapping("/me")
@@ -2095,6 +2459,18 @@ class ProfileController {
             "isAdmin", user.getOrDefault("isAdmin", false),
             "recentHistory", history
         ));
+    }
+
+    @PutMapping("/me/bio")
+    public ResponseEntity<?> updateBio(@RequestBody Map<String, Object> body,
+                                       @AuthenticationPrincipal UserDetails principal) {
+        Map<String, Object> user = db.findUser(principal.getUsername());
+        if (user == null) return ResponseEntity.status(404).body(Map.of("error", "User not found"));
+        String bio = String.valueOf(body.getOrDefault("bio", "")).trim();
+        if (bio.length() > 300) return ResponseEntity.badRequest().body(Map.of("error", "Bio must be 300 characters or fewer"));
+        long userId = ((Number) user.get("id")).longValue();
+        db.updateBio(userId, bio);
+        return ResponseEntity.ok(Map.of("bio", bio));
     }
 }
 
