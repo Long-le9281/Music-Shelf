@@ -70,7 +70,8 @@ mvn -Dtest=Iteration3 test
 - Playlist CRUD + song/album playlist actions
 - Admin user management of endpoints
 - User comments on songs/albums
-- 
+- Users can edit their profile bios
+- Users can search and view other User Profiles
 
 ## Troubleshooting
 - `mvn: command not found` -> install Maven and ensure it is in PATH.
