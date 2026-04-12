@@ -687,7 +687,7 @@ public class RecordShelfDemo {
     // MAIN APP WINDOW
     // -----------------------------
     static void showMain() {
-        JFrame frame = new JFrame("Elgooners Record Shelf");
+        JFrame frame = new JFrame("Alexic Record Shelf");
         frame.setSize(980, 620);
         frame.setMinimumSize(new Dimension(900, 560));
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

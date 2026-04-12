@@ -1,5 +1,5 @@
 # Elgooners Record Shelf
-### CSCI 2040U - Final Product
+### CSCI 2040U - Iteration 3
 
 ## Project Overview
 Elgooners Record Shelf is a full-stack app for browsing albums, searching music, rating albums, managing profiles, and creating playlists.
@@ -20,7 +20,7 @@ Elgooners Record Shelf is a full-stack app for browsing albums, searching music,
 Music-Shelf/
 |-- backend/
 |   |-- pom.xml
-|   `-- src/main/java/com/elgooners/app/App.java
+|   `-- src/main/java/.../App.java
 |-- frontend/
 |   |-- package.json
 |   `-- src/App.jsx
@@ -37,28 +37,65 @@ Music-Shelf/
 - Node.js 18+
 - npm 9+
 
-## Build and Run (Manual)
-From the repo root (`Music-Shelf`):
+## Build and Run
 
-To Start from scratch:
-Run.bat
+### Recommended startup on Windows
+From the repo root (`Music-Shelf`), run:
 
-To Start either the server or client seperately 
-run-backend.bat
-run-frontend.bat
+```powershell
+Set-Location "C:\Users\PC\Desktop\Music-Shelf"
+.\run.bat
+```
 
-## Unit Testing
-All tests are in `backend/src/test/java/com/elgooners/app/`.
+This launcher:
+- checks that Java, Maven, and npm are available
+- offers first-time setup help if `setup.sh` is present and setup has not been completed yet
+- starts the backend on port `8080`
+- waits briefly, then starts the frontend on port `3000`
+- opens the frontend in your browser
 
-### Green tests
+After startup:
+- Backend URL: `http://localhost:8080`
+- Frontend URL: `http://localhost:3000`
+
+### Start backend and frontend separately
+If you want to launch each service in its own step, use these scripts from the repo root:
+
+```powershell
+Set-Location "C:\Users\PC\Desktop\Music-Shelf"
+.\run-backend.bat
+```
+
+Open a second terminal for the frontend:
+
+```powershell
+Set-Location "C:\Users\PC\Desktop\Music-Shelf"
+.\run-frontend.bat
+```
+
+### Manual fallback
+If you prefer to build and run the application manually:
+
+Build the backend:
 
 ```powershell
 Set-Location .\backend
-mvn -Dtest=Iteration1 test
-mvn -Dtest=Iteration2 test
-mvn -Dtest=JwtHelperTest test
-mvn -Dtest=Iteration3 test
+mvn clean install
 ```
+
+Then start the backend in IntelliJ:
+- Open the `backend` folder as a Maven project (it uses `backend/pom.xml`).
+- Wait for dependency sync.
+- Open `backend/src/main/java/.../App.java` and run it with the green play button.
+
+Start the frontend in a separate terminal:
+
+```powershell
+Set-Location .\frontend
+npm install
+npm start
+```
+
 
 
 ## Key Features Present
@@ -68,13 +105,11 @@ mvn -Dtest=Iteration3 test
 - Album ratings
 - User profiles
 - Playlist CRUD + song/album playlist actions
-- Admin user management of endpoints
-- User comments on songs/albums
-- Users can edit their profile bios
-- Users can search and view other User Profiles
+- Admin user management endpoints
 
 ## Troubleshooting
 - `mvn: command not found` -> install Maven and ensure it is in PATH.
 - Port 8080 already in use -> stop conflicting process or change `server.port` in `backend/src/main/resources/application.properties`.
 - Frontend cannot reach backend -> ensure backend is running before `npm start`.
+- Browser shows `connection refused` on first load -> the backend or frontend may still be starting; wait 10-20 seconds, then refresh the page.
 - Missing data in app -> confirm CSV files exist in `database/` and restart backend.

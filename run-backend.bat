@@ -1,21 +1,44 @@
 @echo off
-setlocal
+setlocal EnableDelayedExpansion
 
 set "ROOT=%~dp0"
 set "BACKEND=%ROOT%backend"
+set "SETUP_SCRIPT=%ROOT%setup.sh"
 
-echo Music Shelf backend launcher
+echo Elgooners backend launcher
 echo Root: %ROOT%
 
 where java >nul 2>nul
 if errorlevel 1 (
     echo Java was not found on PATH.
+    if exist "%SETUP_SCRIPT%" (
+        set /p RUN_SETUP=Run setup.sh now? [Y/N]:
+        if /I "!RUN_SETUP!"=="Y" (
+            where bash >nul 2>nul
+            if errorlevel 1 (
+                echo Bash was not found. Install Git Bash or use WSL, then run: sh setup.sh
+            ) else (
+                bash "%SETUP_SCRIPT%"
+            )
+        )
+    )
     exit /b 1
 )
 
 where mvn >nul 2>nul
 if errorlevel 1 (
     echo Maven was not found on PATH.
+    if exist "%SETUP_SCRIPT%" (
+        set /p RUN_SETUP=Run setup.sh now? [Y/N]:
+        if /I "!RUN_SETUP!"=="Y" (
+            where bash >nul 2>nul
+            if errorlevel 1 (
+                echo Bash was not found. Install Git Bash or use WSL, then run: sh setup.sh
+            ) else (
+                bash "%SETUP_SCRIPT%"
+            )
+        )
+    )
     exit /b 1
 )
 
@@ -42,4 +65,3 @@ set "EXIT_CODE=%ERRORLEVEL%"
 
 popd >nul
 exit /b %EXIT_CODE%
-
