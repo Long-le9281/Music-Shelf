@@ -782,17 +782,34 @@ function Navbar() {
     );
 }
 
-// --- Album art (uses provided image when available, otherwise falls back to a gradient) ---
+// --- Album art (uses provided image when available, otherwise falls back to a gradient + placeholder icon) ---
 function AlbumArt({ color1, color2, size, artUrl, gradientAngle = 135, style = {} }) {
     const hasArt = !!(artUrl && artUrl.trim());
+    const iconSize = typeof size === "number"
+        ? Math.max(18, Math.floor(size * 0.28)) + "px"
+        : "clamp(18px, 26%, 60px)";
     return (
         <div style={{
             width: size, height: size,
             background: hasArt
                 ? `center / cover no-repeat url(${artUrl})`
-                : `linear-gradient(${gradientAngle}deg, ${color1 || "#333"}, ${color2 || "#555"})`,
+                : `linear-gradient(${gradientAngle}deg, ${color1 || "#3a3430"}, ${color2 || "#8b7355"})`,
+            position: "relative",
             ...style,
-        }} />
+        }}>
+            {!hasArt && (
+                <span style={{
+                    position: "absolute", inset: 0,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: iconSize,
+                    opacity: 0.32,
+                    pointerEvents: "none",
+                    userSelect: "none",
+                    color: "#fff",
+                    letterSpacing: 0,
+                }}>♪</span>
+            )}
+        </div>
     );
 }
 
@@ -2209,11 +2226,21 @@ function ProfilePage() {
         setSelectedStars(starOptions[nextIndex]);
     }
 
+    // Merge album ratings + song ratings into one list, newest/highest first
+    const allRatings = [
+        ...(profile.ratings     || []).map(r => ({ ...r, _type: "album" })),
+        ...(profile.songRatings || []).map(r => ({ ...r, _type: "song"  })),
+    ].sort((a, b) => {
+        if (b.stars !== a.stars) return b.stars - a.stars;
+        const aT = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+        const bT = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+        return bT - aT;
+    });
+
     const filteredRatings =
         selectedStars === "All"
-            ? profile.ratings
-            : profile.ratings.filter(r => r.stars === selectedStars);
-    const topSongs = (profile.songRatings || []).filter(s => s.stars >= 4);
+            ? allRatings
+            : allRatings.filter(r => r.stars === selectedStars);
 
     return (
         <div className="page profile-page">
@@ -2232,7 +2259,7 @@ function ProfilePage() {
 
             <div className="profile-toolbar">
                 <div className="section-title">
-                    Rated Albums {selectedStars !== "All" ? `: ${selectedStars}★` : ""}
+                    All Ratings {selectedStars !== "All" ? `: ${selectedStars}★` : ""}
                 </div>
                 <button className="profile-filter-btn" type="button" onClick={cycleStars}>
                     Filter Rating
@@ -2286,27 +2313,6 @@ function ProfilePage() {
                 )}
             </div>
 
-            {/* Highest-Rated Songs */}
-            {topSongs.length > 0 && (
-                <>
-                    <div className="section-title" style={{ marginBottom: "1rem", marginTop: "1.5rem" }}>Highest-Rated Songs</div>
-                    {topSongs.map((s, i) => (
-                        <div key={i} className="rating-row">
-                            <div className="rating-art" style={{
-                                background: s.albumArtUrl
-                                    ? `center/cover no-repeat url(${s.albumArtUrl})`
-                                    : `linear-gradient(135deg, ${s.color1}, ${s.color2})`
-                            }} />
-                            <div>
-                                <div className="rating-album-title">{s.title}</div>
-                                <div className="rating-album-artist">{s.artist} · {s.albumTitle}</div>
-                            </div>
-                            <div className="rating-stars">{"★".repeat(s.stars)}</div>
-                        </div>
-                    ))}
-                </>
-            )}
-
             {/* Playlists */}
             {(profile.playlists || []).length > 0 && (
                 <>
@@ -2325,8 +2331,8 @@ function ProfilePage() {
                 </>
             )}
 
-            {/* Rated Albums */}
-            <div className="section-title" style={{ marginBottom: "1rem", marginTop: "1.5rem" }}>Rated Albums</div>
+            {/* All Ratings (albums + songs combined) */}
+            <div className="section-title" style={{ marginBottom: "1rem", marginTop: "1.5rem" }}>All Ratings</div>
 
             {filteredRatings.length === 0 && (
                 <div className="empty">No ratings yet.</div>
@@ -2334,16 +2340,37 @@ function ProfilePage() {
 
             {filteredRatings.map((r, i) => (
                 <div key={i} className="rating-row">
-                    <div className="rating-art" style={{ background: `linear-gradient(135deg, ${r.color1}, ${r.color2})` }} />
-                    <div>
-                        <div className="rating-album-title">{r.title}</div>
+                    <div className="rating-art" style={{
+                        background: r.albumArtUrl
+                            ? `center/cover no-repeat url(${r.albumArtUrl})`
+                            : `linear-gradient(135deg, ${r.color1}, ${r.color2})`
+                    }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="rating-album-title">
+                            {r.title}
+                            {r._type === "song" && (
+                                <span style={{
+                                    marginLeft: "0.5rem",
+                                    fontSize: "0.6rem",
+                                    background: "rgba(212,116,79,0.15)",
+                                    color: "#d4744f",
+                                    borderRadius: 999,
+                                    padding: "0.1rem 0.45rem",
+                                    fontWeight: 700,
+                                    letterSpacing: "0.5px",
+                                    textTransform: "uppercase",
+                                    verticalAlign: "middle",
+                                }}>Song</span>
+                            )}
+                        </div>
                         <div className="rating-album-artist">
                             {r.artist}
-                            {r.year}
+                            {r._type === "song" && r.albumTitle ? ` · ${r.albumTitle}` : ""}
+                            {r._type === "album" && r.year ? ` ${r.year}` : ""}
                             {r.updatedAt ? ` · rated ${new Date(r.updatedAt).toLocaleDateString()}` : ""}
                         </div>
                     </div>
-                    <div className="rating-stars">{"★".repeat(r.stars)}</div>
+                    <div className="rating-stars" style={{ marginLeft: "auto", fontSize: "0.8rem" }}>{"★".repeat(r.stars)}</div>
                 </div>
             ))}
         </div>
@@ -2684,7 +2711,7 @@ function SignupPage() {
     return (
         <div className="auth-page">
             <div className="auth-card">
-                <div className="auth-logo">ELGOON<span>ERS</span></div>
+                <div className="auth-logo">ALEX<span>IC</span></div>
                 <div className="auth-heading">Create your account</div>
                 <form onSubmit={handleSubmit}>
                     <div className="field">
@@ -2735,7 +2762,7 @@ function LoginPage() {
     return (
         <div className="auth-page">
             <div className="auth-card">
-                <div className="auth-logo">ELGOON<span>ERS</span></div>
+                <div className="auth-logo">ALEX<span>IC</span></div>
                 <div className="auth-heading">Welcome back</div>
                 <form onSubmit={handleSubmit}>
                     <div className="field">

@@ -2,7 +2,7 @@ package com.elgooners.app;
 
 /*
  * Elgooners Record Shelf - Backend (Spring Boot)
- * ------------------------------------------------
+ * --------------------------------------------
  * HOW TO RUN:
  *   1. Open the "backend" folder in IntelliJ as a Maven project
  *   2. Wait for Maven to download dependencies (first time only)
@@ -117,7 +117,7 @@ class App {
 
 // ============================================================
 // DATABASE
-// Handles all SQL queries to elgooners.db
+// Handles all SQL queries to recordshelf.db
 // To change the database location, update DB_PATH below.
 // ============================================================
 
@@ -590,16 +590,22 @@ class Database {
             GROUP BY a.id
             HAVING COUNT(s.id) = 0
             """;
+        Map<Long, String> albumsMissingSongs = new LinkedHashMap<>();
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 long albumId = rs.getLong("id");
                 String title = rs.getString("title");
-                createSong(albumId, title + " (Title Track)", 1, 180);
+                albumsMissingSongs.put(albumId, title);
             }
         } catch (SQLException e) {
             System.out.println("Error ensuring default songs: " + e.getMessage());
+            return;
+        }
+
+        for (Map.Entry<Long, String> entry : albumsMissingSongs.entrySet()) {
+            createSong(entry.getKey(), entry.getValue() + " (Title Track)", 1, 180);
         }
     }
 
@@ -1130,7 +1136,7 @@ class Database {
         Long existingId = findAlbumIdByIdentity(title, artist);
         if (existingId != null) return existingId;
 
-        String sql = "INSERT INTO albums (title, artist, release_year, genre, description, color1, color2, is_single) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO albums (title, artist, release_year, genre, description, color1, color2, album_art_url, is_single) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setString(1, title);
@@ -1140,7 +1146,8 @@ class Database {
             stmt.setString(5, description);
             stmt.setString(6, color1);
             stmt.setString(7, color2);
-            stmt.setInt(8, isSingle ? 1 : 0);
+            stmt.setString(8, "");   // album_art_url — empty; no art for manually-added items
+            stmt.setInt(9, isSingle ? 1 : 0);
             stmt.executeUpdate();
             ResultSet keys = stmt.getGeneratedKeys();
             if (keys.next()) return keys.getLong(1);
@@ -2126,8 +2133,25 @@ class AlbumController {
 
         String genre = String.valueOf(body.getOrDefault("genre", "Unknown")).trim();
         String description = String.valueOf(body.getOrDefault("description", "Added from search when no result was found.")).trim();
-        String color1 = String.valueOf(body.getOrDefault("color1", "#5f5aa2")).trim();
-        String color2 = String.valueOf(body.getOrDefault("color2", "#a3bffa")).trim();
+
+        // Assign a random gradient pair so every new item looks distinct from existing ones
+        String[][] gradientPairs = {
+            {"#2d3561", "#a8c6fa"},
+            {"#4a1942", "#c97b84"},
+            {"#1b4332", "#52b788"},
+            {"#7f4f24", "#dda15e"},
+            {"#370617", "#e85d04"},
+            {"#023e8a", "#48cae4"},
+            {"#3d405b", "#81b29a"},
+            {"#6b2d8b", "#e0aaff"},
+            {"#5f5aa2", "#a3bffa"},
+            {"#1a535c", "#4ecdc4"},
+        };
+        String[] chosenPair = gradientPairs[new Random().nextInt(gradientPairs.length)];
+        Object rawC1 = body.get("color1");
+        Object rawC2 = body.get("color2");
+        String color1 = (rawC1 != null && !rawC1.toString().isBlank()) ? rawC1.toString().trim() : chosenPair[0];
+        String color2 = (rawC2 != null && !rawC2.toString().isBlank()) ? rawC2.toString().trim() : chosenPair[1];
 
         if (type.equals("song")) {
             String cleanArtist = artist.isBlank() ? "Unknown Artist" : artist;
@@ -2715,3 +2739,5 @@ class AdminController {
         return out.toString();
     }
 }
+
+

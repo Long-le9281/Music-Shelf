@@ -23,4 +23,3 @@ class JwtHelperTest {
         assertNull(helper.getUsernameFromToken("not-a-real-jwt"));
     }
 }
-

@@ -20,7 +20,7 @@ Elgooners Record Shelf is a full-stack app for browsing albums, searching music,
 Music-Shelf/
 |-- backend/
 |   |-- pom.xml
-|   `-- src/main/java/com/elgooners/app/App.java
+|   `-- src/main/java/.../App.java
 |-- frontend/
 |   |-- package.json
 |   `-- src/App.jsx
@@ -37,8 +37,46 @@ Music-Shelf/
 - Node.js 18+
 - npm 9+
 
-## Build and Run (Manual)
-From the repo root (`Music-Shelf`):
+## Build and Run
+
+### Recommended startup on Windows
+From the repo root (`Music-Shelf`), run:
+
+```powershell
+Set-Location "C:\Users\PC\Desktop\Music-Shelf"
+.\run.bat
+```
+
+This launcher:
+- checks that Java, Maven, and npm are available
+- offers first-time setup help if `setup.sh` is present and setup has not been completed yet
+- starts the backend on port `8080`
+- waits briefly, then starts the frontend on port `3000`
+- opens the frontend in your browser
+
+After startup:
+- Backend URL: `http://localhost:8080`
+- Frontend URL: `http://localhost:3000`
+
+### Start backend and frontend separately
+If you want to launch each service in its own step, use these scripts from the repo root:
+
+```powershell
+Set-Location "C:\Users\PC\Desktop\Music-Shelf"
+.\run-backend.bat
+```
+
+Open a second terminal for the frontend:
+
+```powershell
+Set-Location "C:\Users\PC\Desktop\Music-Shelf"
+.\run-frontend.bat
+```
+
+### Manual fallback
+If you prefer to build and run the application manually:
+
+Build the backend:
 
 ```powershell
 Set-Location .\backend
@@ -48,7 +86,7 @@ mvn clean install
 Then start the backend in IntelliJ:
 - Open the `backend` folder as a Maven project (it uses `backend/pom.xml`).
 - Wait for dependency sync.
-- Open `backend/src/main/java/com/elgooners/app/App.java` and run it with the green play button.
+- Open `backend/src/main/java/.../App.java` and run it with the green play button.
 
 Start the frontend in a separate terminal:
 
@@ -58,29 +96,7 @@ npm install
 npm start
 ```
 
-- Backend URL: `http://localhost:8080`
-- Frontend URL: `http://localhost:3000`
 
-## Unit Testing
-All tests are in `backend/src/test/java/com/elgooners/app/`.
-
-### Green tests (expected to pass)
-
-```powershell
-Set-Location .\backend
-mvn -Dtest=Iteration1DoneColumnTest test
-mvn -Dtest=Iteration2InProgressColumnTest test
-mvn -Dtest=JwtHelperTest test
-```
-
-### Red tests (expected to fail intentionally)
-
-```powershell
-Set-Location .\backend
-mvn -Dtest=Iteration3ToDoColumnRedDemo test
-```
-
-`Iteration3ToDoColumnRedDemo` represents unimplemented To-Do board items and is intentionally red for TDD/demo use.
 
 ## Key Features Present
 - Authentication: signup/login with JWT
@@ -95,4 +111,5 @@ mvn -Dtest=Iteration3ToDoColumnRedDemo test
 - `mvn: command not found` -> install Maven and ensure it is in PATH.
 - Port 8080 already in use -> stop conflicting process or change `server.port` in `backend/src/main/resources/application.properties`.
 - Frontend cannot reach backend -> ensure backend is running before `npm start`.
+- Browser shows `connection refused` on first load -> the backend or frontend may still be starting; wait 10-20 seconds, then refresh the page.
 - Missing data in app -> confirm CSV files exist in `database/` and restart backend.

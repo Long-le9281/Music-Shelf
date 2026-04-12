@@ -1,15 +1,27 @@
 @echo off
-setlocal
+setlocal EnableDelayedExpansion
 
 set "ROOT=%~dp0"
 set "FRONTEND=%ROOT%frontend"
+set "SETUP_SCRIPT=%ROOT%setup.sh"
 
-echo Music Shelf frontend launcher
+echo Elgooners frontend launcher
 echo Root: %ROOT%
 
 where npm >nul 2>nul
 if errorlevel 1 (
     echo npm was not found on PATH.
+    if exist "%SETUP_SCRIPT%" (
+        set /p RUN_SETUP=Run setup.sh now? [Y/N]:
+        if /I "!RUN_SETUP!"=="Y" (
+            where bash >nul 2>nul
+            if errorlevel 1 (
+                echo Bash was not found. Install Git Bash or use WSL, then run: sh setup.sh
+            ) else (
+                bash "%SETUP_SCRIPT%"
+            )
+        )
+    )
     exit /b 1
 )
 
@@ -45,4 +57,3 @@ set "EXIT_CODE=%ERRORLEVEL%"
 
 popd >nul
 exit /b %EXIT_CODE%
-

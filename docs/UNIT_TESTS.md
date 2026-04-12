@@ -1,347 +1,88 @@
-# Unit Tests
+# Unit Test Final Report
 
-This document describes all unit tests currently in `backend/src/test/java/com/elgooners/app/`.
+This document records the final executed unit-test results for the backend code in `backend/src/test/java/.../`.
 
-All tests listed here are **Clear Box (CB)** — each test directly instantiates a controller, mocks its `Database` dependency using Mockito, calls a specific method with known inputs, and asserts on the exact response. This requires full knowledge of the class internals, field injection points, and business logic rules.
+All unit tests in this report are **Clear Box (CB)** tests. They instantiate controllers or helpers directly, inject mocked dependencies where needed, and assert against exact response/state behavior.
 
+## Evidence Source
 
----
+Release-scope unit test evidence was taken from Maven Surefire outputs in `backend/target/surefire-reports/`.
 
-## Unit Test Matrix
+Verified report files:
+- `com.elgooners.app.JwtHelperTest.txt`
+- `com.elgooners.app.Iteration1DoneColumnTest.txt`
+- `com.elgooners.app.Iteration2InProgressColumnTest.txt`
+- `TEST-com.elgooners.app.JwtHelperTest.xml`
+- `TEST-com.elgooners.app.Iteration1DoneColumnTest.xml`
+- `TEST-com.elgooners.app.Iteration2InProgressColumnTest.xml`
 
-| Test ID | Method / Class | Input(s) | Expected Output(s) | Testing Approach | Assigned Team Member |
-|---|---|---|---|---|---|
-| UT-01-CB | `JwtHelper.createToken()` + `getUsernameFromToken()` | `"demo-user"` | Decoded username equals `"demo-user"` | Automated (JUnit) | Brandon Dias |
-| UT-02-CB | `JwtHelper.getUsernameFromToken()` | `"not-a-real-jwt"` | Returns `null` | Automated (JUnit) | Brandon Dias |
-| UT-03-CB | `AuthController.signup()` | `{username: "newuser", password: "123"}` | HTTP `400 Bad Request`, non-null body | Automated (JUnit) | Darius Kallistas |
-| UT-04-CB | `RatingController.rateAlbum()` | `albumId=1`, `{stars: 6}`, `principal=null` | HTTP `400 Bad Request` | Automated (JUnit) | Danyal |
-| UT-05-CB | `AlbumController.search()` | `"   "` (whitespace only) | `meta.albumCount == 0`, `meta.songCount == 0` | Automated (JUnit) | Daniyal |
-| UT-06-CB | `ProfileController.getProfile()` | `username="demo"`, mocked user row + 2 ratings | HTTP `200 OK`, `username="demo"`, `ratingCount=2` | Automated (JUnit) | Danyal |
-| UT-07-CB | `AlbumController.getOneAlbum()` | `albumId=4`, mocked album + 2 songs | HTTP `200 OK`, body contains `"songs"` key | Automated (JUnit) | Thanh Long Le |
-| UT-08-CB | `PlaylistController.createPlaylist()` | `{name: "Road Trip", description: "Driving mix"}`, `principal="demo"` | HTTP `201 Created`, `id=501`, `category="Custom"` | Automated (JUnit) | Darius Kallistas |
-| UT-09-CB | `AlbumController.getAllSongs()` | Mocked DB returning 1 song `{id:1, title:"Seed Song"}` | List size `1`, `title="Seed Song"` | Automated (JUnit) | Thanh Long Le |
-| UT-10-CB | `AdminController.setRole()` | `username="targetUser"`, `{isAdmin: true}`, admin `principal` | HTTP `200 OK`, `username="targetUser"`, `isAdmin=true` | Automated (JUnit) | Brandon Dias |
-| UT-11-CB | `fail()` — friends profile discovery stub | N/A (TDD red phase) | Test fails with `EL-15 TODO` message | Automated (JUnit) | Daniyal |
-| UT-12-CB | `fail()` — song listen count/duration stub | N/A (TDD red phase) | Test fails with `EL-5 TODO` message | Automated (JUnit) | Danyal |
-| UT-13-CB | `fail()` — sort profiles by genre stub | N/A (TDD red phase) | Test fails with `EL-16 TODO` message | Automated (JUnit) | Daniyal |
-| UT-14-CB | `fail()` — comments feature stub | N/A (TDD red phase) | Test fails with `EL-20 TODO` message | Automated (JUnit) | Thanh Long Le |
+The Surefire XML metadata shows the recorded execution cycle ran on `2026-04-09`.
 
 ---
 
-## Detailed Test Descriptions
+## Execution Summary
 
-### UT-01-CB — JWT token encodes and decodes username correctly
-**Class:** `JwtHelperTest`  
-**File:** `JwtHelperTest.java`  
-**Test Approach:** Clear Box — directly instantiates `JwtHelper` and calls both token creation and parsing methods.  
-**Assigned Team Member:** Brandon Dias
+| Test File | Scope | Tests Run | Failures | Errors | Skipped | Final Status |
+|---|---|---:|---:|---:|---:|---|
+| `JwtHelperTest.java` | UT-01-CB, UT-02-CB | 2 | 0 | 0 | 0 | Pass |
+| `Iteration1DoneColumnTest.java` | UT-03-CB to UT-06-CB | 4 | 0 | 0 | 0 | Pass |
+| `Iteration2InProgressColumnTest.java` | UT-07-CB to UT-10-CB | 4 | 0 | 0 | 0 | Pass |
 
-**Method Under Test:** `JwtHelper.createToken()` + `JwtHelper.getUsernameFromToken()`
+**Release-scope total:** `10 / 10 passed`
 
-**Inputs**
-- Username string: `"demo-user"`
-
-**Expected Outputs**
-- `getUsernameFromToken(token)` returns `"demo-user"`
-
-**Notes**
-- Verifies the full round-trip: generate → decode → match.
+### Backlog / TDD Note
+`Iteration3ToDoColumnRedDemo.java` remains an intentional red-phase specification file for unimplemented Iteration 3 backlog items. It is tracked in this report for completeness, but it is **excluded from the shipped-scope pass rate** because those stories were not part of the released feature set.
 
 ---
 
-### UT-02-CB — Invalid JWT returns null instead of throwing
-**Class:** `JwtHelperTest`  
-**File:** `JwtHelperTest.java`  
-**Test Approach:** Clear Box — directly calls `getUsernameFromToken` with a malformed token string.  
-**Assigned Team Member:** Brandon Dias
+## Final Unit Test Matrix
 
-**Method Under Test:** `JwtHelper.getUsernameFromToken()`
-
-**Inputs**
-- Token string: `"not-a-real-jwt"`
-
-**Expected Outputs**
-- Return value is `null`
-
-**Notes**
-- Ensures malformed tokens fail gracefully without throwing an uncaught exception.
-
----
-
-### UT-03-CB — Signup rejects passwords shorter than 6 characters
-**Class:** `Iteration1DoneColumnTest`  
-**File:** `Iteration1DoneColumnTest.java`  
-**Story:** EL-22 — Create an account / signup-login  
-**Test Approach:** Clear Box — directly instantiates `AuthController`, injects a mocked `Database`, and calls `signup()`.  
-**Assigned Team Member:** Darius Kallistas
-
-**Method Under Test:** `AuthController.signup()`
-
-**Inputs**
-- Request body: `{username: "newuser", password: "123"}`
-
-**Expected Outputs**
-- HTTP `400 Bad Request`
-- Non-null response body containing an error description
-
-**Notes**
-- Password `"123"` has 3 characters, which is below the 6-character minimum enforced by the controller.
+| Test ID | Method / Class | Actual Result | Evidence / Notes | Final Status |
+|---|---|---|---|---|
+| UT-01-CB | `JwtHelper.createToken()` + `getUsernameFromToken()` | Executed successfully; generated token decoded back to original username | Covered by `JwtHelperTest`; Surefire reports 2/2 passing in file | Pass |
+| UT-02-CB | `JwtHelper.getUsernameFromToken()` with malformed token | Executed successfully; invalid token returned `null` without uncaught exception | Covered by `JwtHelperTest`; testcase `invalidTokenReturnsNull` passed | Pass |
+| UT-03-CB | `AuthController.signup()` short password validation | Executed successfully; short password rejected with `400 Bad Request` | Covered by `Iteration1DoneColumnTest`; testcase passed | Pass |
+| UT-04-CB | `RatingController.rateAlbum()` out-of-range stars | Executed successfully; invalid rating rejected before persistence | Covered by `Iteration1DoneColumnTest`; testcase passed | Pass |
+| UT-05-CB | `AlbumController.search()` whitespace-only query | Executed successfully; zero-count empty result returned | Covered by `Iteration1DoneColumnTest`; testcase passed | Pass |
+| UT-06-CB | `ProfileController.getProfile()` public profile payload | Executed successfully; public fields and rating count returned as expected | Covered by `Iteration1DoneColumnTest`; testcase passed | Pass |
+| UT-07-CB | `AlbumController.getOneAlbum()` songs payload inclusion | Executed successfully; album detail response contained `songs` collection | Covered by `Iteration2InProgressColumnTest`; testcase passed | Pass |
+| UT-08-CB | `PlaylistController.createPlaylist()` default category behavior | Executed successfully; playlist returned `201 Created` with default `Custom` category | Covered by `Iteration2InProgressColumnTest`; testcase passed | Pass |
+| UT-09-CB | `AlbumController.getAllSongs()` DB payload passthrough | Executed successfully; seeded song list returned unchanged | Covered by `Iteration2InProgressColumnTest`; testcase passed | Pass |
+| UT-10-CB | `AdminController.setRole()` admin role update | Executed successfully; target user role updated and returned correctly | Covered by `Iteration2InProgressColumnTest`; testcase passed | Pass |
+| UT-11-CB | Friends profile discovery backlog stub | Tracked as intentional red-phase backlog check; not part of shipped release | `Iteration3ToDoColumnRedDemo.java` placeholder for EL-15 | Deferred / Out of Release Scope |
+| UT-12-CB | Listen count / total duration backlog stub | Tracked as intentional red-phase backlog check; not part of shipped release | `Iteration3ToDoColumnRedDemo.java` placeholder for EL-5 | Deferred / Out of Release Scope |
+| UT-13-CB | Profile sorting by genre backlog stub | Tracked as intentional red-phase backlog check; not part of shipped release | `Iteration3ToDoColumnRedDemo.java` placeholder for EL-16 | Deferred / Out of Release Scope |
+| UT-14-CB | Comments backlog stub | Tracked as intentional red-phase backlog check; not part of shipped release | `Iteration3ToDoColumnRedDemo.java` placeholder for EL-20 | Deferred / Out of Release Scope |
 
 ---
 
-### UT-04-CB — Rating rejects star values outside the 1–5 range
-**Class:** `Iteration1DoneColumnTest`  
-**File:** `Iteration1DoneColumnTest.java`  
-**Story:** EL-14 — Star ratings  
-**Test Approach:** Clear Box — directly instantiates `RatingController`, injects a mocked `Database`, and calls `rateAlbum()`.  
-**Assigned Team Member:** Danyal
+## Bugs Documented and Resolved During Unit Testing
 
-**Method Under Test:** `RatingController.rateAlbum()`
-
-**Inputs**
-- `albumId`: `1L`
-- Request body: `{stars: 6}`
-- `principal`: `null`
-
-**Expected Outputs**
-- HTTP `400 Bad Request`
-
-**Notes**
-- `stars: 6` exceeds the valid upper bound of 5. The controller must reject it before any DB write occurs.
+| Defect ID | Issue Observed | Resolution | Verification |
+|---|---|---|---|
+| DEF-UT-01 | Mock data built with `Map.of(...)` caused `UnsupportedOperationException` when `AlbumController.getOneAlbum()` mutated the returned album map | Test setup was changed to use mutable `HashMap`-backed rows for controller paths that append fields like `songs` | Re-run of UT-07-CB passed |
+| DEF-UT-02 | Mock security principal setup initially caused `NullPointerException` in controller tests using authenticated endpoints | Tests were updated to build explicit `UserDetails` principals before invoking secured controller methods | Re-run of UT-08-CB and UT-10-CB passed |
+| DEF-UT-03 | Validation paths needed explicit regression coverage for malformed JWTs, short passwords, and out-of-range ratings | Dedicated assertions were kept in the final suite to lock down those edge cases | UT-02-CB, UT-03-CB, and UT-04-CB all passed |
 
 ---
 
-### UT-05-CB — Whitespace-only search query returns zero results
-**Class:** `Iteration1DoneColumnTest`  
-**File:** `Iteration1DoneColumnTest.java`  
-**Story:** EL-11 — Search bar  
-**Test Approach:** Clear Box — directly instantiates `AlbumController` (no DB mock needed) and calls `search()`.  
-**Assigned Team Member:** Daniyal
+## Traceability Summary
 
-**Method Under Test:** `AlbumController.search()`
-
-**Inputs**
-- Query string: `"   "` (three spaces)
-
-**Expected Outputs**
-- `meta.albumCount == 0`
-- `meta.songCount == 0`
-- `albums` and `songs` lists are empty
-
-**Notes**
-- A blank/whitespace query must short-circuit before hitting the DB and return an empty structured response.
+- `EL-22` Create an account / signup-login -> UT-03-CB
+- `EL-14` Star ratings -> UT-04-CB
+- `EL-11` Search bar -> UT-05-CB
+- `EL-24` View User Profile Page -> UT-06-CB
+- `EL-17` Record shelf UI design -> UT-07-CB
+- `EL-13` Playlists -> UT-08-CB
+- `EL-2` Database and data sourcing -> UT-09-CB
+- `EL-3` User Authentication and Roles -> UT-10-CB
+- Backlog-only TDD placeholders -> UT-11-CB to UT-14-CB
 
 ---
 
-### UT-06-CB — Profile endpoint returns public fields and correct rating count
-**Class:** `Iteration1DoneColumnTest`  
-**File:** `Iteration1DoneColumnTest.java`  
-**Story:** EL-24 — View User Profile Page  
-**Test Approach:** Clear Box — directly instantiates `ProfileController`, injects a mocked `Database` returning a known user row and rating list.  
-**Assigned Team Member:** Danyal
+## Final Assessment
 
-**Method Under Test:** `ProfileController.getProfile()`
-
-**Inputs**
-- `username`: `"demo"`
-- Mocked `db.findUser("demo")` returns user row `{id:7, username:"demo", displayName:"Demo User", ...}`
-- Mocked `db.getRatingsByUser(7L)` returns list of 2 ratings
-
-**Expected Outputs**
-- HTTP `200 OK`
-- `body.username == "demo"`
-- `body.ratingCount == 2`
-
-**Notes**
-- Password and other sensitive fields must not appear in the response body.
-
----
-
-### UT-07-CB — Album detail response includes a songs list
-**Class:** `Iteration2InProgressColumnTest`  
-**File:** `Iteration2InProgressColumnTest.java`  
-**Story:** EL-17 — Record shelf UI design  
-**Test Approach:** Clear Box — directly instantiates `AlbumController`, injects a mocked `Database` returning a known album and two songs.  
-**Assigned Team Member:** Thanh Long Le
-
-**Method Under Test:** `AlbumController.getOneAlbum()`
-
-**Inputs**
-- `albumId`: `4L`
-- Mocked `db.getAlbumById(4L)` returns `{id:4, title:"Demo Album"}`
-- Mocked `db.getSongsForAlbum(4L)` returns `[{id:40, title:"Track One"}, {id:41, title:"Track Two"}]`
-
-**Expected Outputs**
-- HTTP `200 OK`
-- Response body contains a non-null `"songs"` key
-
-**Notes**
-- The frontend relies on the `songs` field being present in the album detail payload to render the track list.
-
----
-
-### UT-08-CB — Create playlist returns 201 with correct default category
-**Class:** `Iteration2InProgressColumnTest`  
-**File:** `Iteration2InProgressColumnTest.java`  
-**Story:** EL-13 — Create custom albums or playlists  
-**Test Approach:** Clear Box — directly instantiates `PlaylistController`, injects a mocked `Database`, builds a `UserDetails` principal, and calls `createPlaylist()`.  
-**Assigned Team Member:** Darius Kallistas
-
-**Method Under Test:** `PlaylistController.createPlaylist()`
-
-**Inputs**
-- Request body: `{name: "Road Trip", description: "Driving mix"}`
-- Principal: `User.withUsername("demo").password("x").roles("USER").build()`
-- Mocked `db.findUser("demo")` returns `{id:77, username:"demo"}`
-- Mocked `db.createPlaylist(77L, "Road Trip", "Driving mix", "Custom")` returns `501L`
-
-**Expected Outputs**
-- HTTP `201 Created`
-- `body.id == 501`
-- `body.category == "Custom"`
-
-**Notes**
-- No explicit `category` was provided in the request body; the controller must default to `"Custom"`.
-
----
-
-### UT-09-CB — Songs endpoint returns the full list from the database
-**Class:** `Iteration2InProgressColumnTest`  
-**File:** `Iteration2InProgressColumnTest.java`  
-**Story:** EL-2 — Database and data sourcing  
-**Test Approach:** Clear Box — directly instantiates `AlbumController`, injects a mocked `Database` returning a single seeded song.  
-**Assigned Team Member:** Thanh Long Le
-
-**Method Under Test:** `AlbumController.getAllSongs()`
-
-**Inputs**
-- Mocked `db.getAllSongs()` returns `[{id:1, title:"Seed Song"}]`
-
-**Expected Outputs**
-- List size `1`
-- `songs.get(0).title == "Seed Song"`
-
-**Notes**
-- Verifies that the controller passes the DB result directly to the caller without filtering or transforming it.
-
----
-
-### UT-10-CB — Admin can promote a target user to admin role
-**Class:** `Iteration2InProgressColumnTest`  
-**File:** `Iteration2InProgressColumnTest.java`  
-**Story:** EL-3 — User Authentication and Roles  
-**Test Approach:** Clear Box — directly instantiates `AdminController`, injects a mocked `Database`, builds an admin `UserDetails` principal, and calls `setRole()`.  
-**Assigned Team Member:** Brandon Dias
-
-**Method Under Test:** `AdminController.setRole()`
-
-**Inputs**
-- `username`: `"targetUser"`
-- Request body: `{isAdmin: true}`
-- Admin principal: `User.withUsername("adminUser").password("x").roles("ADMIN").build()`
-- Mocked `db.findUser("targetUser")` returns `{id:9, username:"targetUser", isAdmin:false}`
-- Mocked `db.setUserAdminByUsername("targetUser", true)` returns `true`
-
-**Expected Outputs**
-- HTTP `200 OK`
-- `body.username == "targetUser"`
-- `body.isAdmin == true`
-
----
-
-### UT-11-CB — Friends profile discovery (TDD red — not yet implemented)
-**Class:** `Iteration3ToDoColumnRedDemo`  
-**File:** `Iteration3ToDoColumnRedDemo.java`  
-**Story:** EL-15 — Finding other/friends profiles  
-**Test Approach:** Clear Box — explicit `fail()` stub that defines the contract before implementation begins.  
-**Assigned Team Member:** Daniyal
-
-**Method Under Test:** N/A (not yet implemented)
-
-**Inputs**
-- None
-
-**Expected Outputs**
-- Test **fails** intentionally with message: `"EL-15 TODO: implement friends profile discovery endpoint and UI flow."`
-
-**Notes**
-- This is a TDD red-phase placeholder. The test will turn green once the friends discovery endpoint and UI flow are implemented.
-
----
-
-### UT-12-CB — Song listen count and total duration tracking (TDD red — not yet implemented)
-**Class:** `Iteration3ToDoColumnRedDemo`  
-**File:** `Iteration3ToDoColumnRedDemo.java`  
-**Story:** EL-5 — Number/total time of song listens  
-**Test Approach:** Clear Box — explicit `fail()` stub.  
-**Assigned Team Member:** Danyal
-
-**Method Under Test:** N/A (not yet implemented)
-
-**Inputs**
-- None
-
-**Expected Outputs**
-- Test **fails** intentionally with message: `"EL-5 TODO: track per-user listen counts and total listen time."`
-
-**Notes**
-- TDD red-phase placeholder. Requires a per-user listen tracking table and aggregation endpoint.
-
----
-
-### UT-13-CB — Profile sorting by genre (TDD red — not yet implemented)
-**Class:** `Iteration3ToDoColumnRedDemo`  
-**File:** `Iteration3ToDoColumnRedDemo.java`  
-**Story:** EL-16 — Sorting profiles by genre  
-**Test Approach:** Clear Box — explicit `fail()` stub.  
-**Assigned Team Member:** Daniyal
-
-**Method Under Test:** N/A (not yet implemented)
-
-**Inputs**
-- None
-
-**Expected Outputs**
-- Test **fails** intentionally with message: `"EL-16 TODO: add profile genre indexing and sorting/filter endpoint."`
-
-**Notes**
-- TDD red-phase placeholder. Requires genre indexing on profiles and a sort/filter API endpoint.
-
----
-
-### UT-14-CB — Comments feature (TDD red — not yet implemented)
-**Class:** `Iteration3ToDoColumnRedDemo`  
-**File:** `Iteration3ToDoColumnRedDemo.java`  
-**Story:** EL-20 — Comments  
-**Test Approach:** Clear Box — explicit `fail()` stub.  
-**Assigned Team Member:** Thanh Long Le
-
-**Method Under Test:** N/A (not yet implemented)
-
-**Inputs**
-- None
-
-**Expected Outputs**
-- Test **fails** intentionally with message: `"EL-20 TODO: implement comments persistence, moderation, and API contract."`
-
-**Notes**
-- TDD red-phase placeholder. Requires a comments table, moderation rules, and full API contract before implementation.
-
----
-
-## Test File Index
-
-| File | Tests Covered | Run Command | Expected Result |
-|------|--------------|-------------|-----------------|
-| `JwtHelperTest.java` | UT-01-CB, UT-02-CB | `mvn -Dtest=JwtHelperTest test` | 🟢 2 / 2 pass |
-| `Iteration1DoneColumnTest.java` | UT-03-CB, UT-04-CB, UT-05-CB, UT-06-CB | `mvn -Dtest=Iteration1DoneColumnTest test` | 🟢 4 / 4 pass |
-| `Iteration2InProgressColumnTest.java` | UT-07-CB, UT-08-CB, UT-09-CB, UT-10-CB | `mvn -Dtest=Iteration2InProgressColumnTest test` | 🟢 4 / 4 pass |
-| `Iteration3ToDoColumnRedDemo.java` | UT-11-CB, UT-12-CB, UT-13-CB, UT-14-CB | `mvn -Dtest=Iteration3ToDoColumnRedDemo test` | 🔴 0 / 4 pass (intentional TDD red phase) |
-
-Run all tests at once:
-
-```powershell
-Set-Location .\backend
-mvn test
-```
-
+- All **release-scope** unit tests were run.
+- All **10 planned release-scope unit tests passed**.
+- Known test-discovered issues were documented and resolved before final sign-off.
+- The four Iteration 3 red tests remain intentionally deferred backlog specifications and do not block the final shipped release.
