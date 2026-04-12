@@ -1,5 +1,5 @@
 # Elgooners Record Shelf
-### CSCI 2040U - Iteration 3
+### CSCI 2040U - Final Product
 
 ## Project Overview
 Elgooners Record Shelf is a full-stack app for browsing albums, searching music, rating albums, managing profiles, and creating playlists.
