@@ -3,7 +3,7 @@
 ## Overview
 This document provides a step-by-step walkthrough of the Music-Shelf MVP, demonstrating all core features and functionality.
 
-**Demo Credentials:** Username: `demo` | Password: `demo`
+**Demo Credentials:** Username: `demo` | Password: `demo123`
 
 ---
 
@@ -14,7 +14,7 @@ A simple login window with fields for username and password, plus "Login" and "S
 
 **How to Use:**
 - Enter username: `demo`
-- Enter password: `demo`
+- Enter password: `demo123`
 - Click "Login" button
 
 **What Happens:**
