@@ -74,7 +74,7 @@ Contribution snapshot (excluding working branches, which will skew numbers heavi
 |---|---:|---:|---|
 | Brandon Dias | 11 | 3 | Created the database, user search and bio features as well as tracked team progress with a burndown chart. |
 | Darius Kallistas | 33 | 4 | Worked on frontend UI and controller logic. Handled branch management (hence the amount of commits to main). |
-| Daniyal Danish | 5 | 0 |  |
+| Daniyal Danish | 5 | 0 | Did Phase 2. Made test cases throughout the project. Bug fixing. Made Trello, kept communication running, organized meetings. |
 | Danyal Fahim | 8 | 1 | Created the save and loading system for data, created the initial burndown chart for iteration 1, created the sorting by rating system for albums on a profile, and bug identifying/fixing and quality assurance. |
 | Thanh Long Le | 7 | 3 | Developed playlist and comments feature, merge conflict resolution, and software testing, and bug fixing. |
 
@@ -90,18 +90,6 @@ Write failing test first  →  Confirm RED  →  Implement feature  →  Confirm
 
 ---
 
-## TDD Demo: Iteration 3 (To-Do Features — RED First)
-
-These tests were written **before implementation** to document what still needs to be built.
-
-**Run the red tests:**
-
-```bash
-# In backend/ directory
-mvn -Dtest=Iteration3ToDoColumnRedDemo test
-```
-
----
 
 ## 🔴 EXAMPLE: Red Test Results (Intentional — Features Not Built Yet)
 
