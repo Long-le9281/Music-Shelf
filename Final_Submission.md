@@ -66,6 +66,20 @@ git branch -a
 
 ---
 
+## Contribution Report
+
+Contribution snapshot (excluding working branches, which will skew numbers heavily), as shown in the team report image:
+
+| Name | # of commits to main (excluding working branches) | # of pull requests | Roles and Responsibilities |
+|---|---:|---:|---|
+| Brandon Dias | 11 | 3 | Created the database, user search and bio features as well as tracked team progress with a burndown chart. |
+| Darius Kallistas | 33 | 4 | Worked on frontend UI and controller logic. Handled branch management (hence the amount of commits to main). |
+| Daniyal Danish | 5 | 0 |  |
+| Danyal Fahim | 8 | 1 | Created the save and loading system for data, created the initial burndown chart for iteration 1, created the sorting by rating system for albums on a profile, and bug identifying/fixing and quality assurance. |
+| Thanh Long Le | 7 | 3 | Developed playlist and comments feature, merge conflict resolution, and software testing, and bug fixing. |
+
+---
+
 # 🔴 4. Test-Driven Development (TDD) (Further documentation can be found in the docs folder)
 
 ## The Process We Followed
@@ -229,7 +243,6 @@ This project deliberately mixes all three testing views to maximize confidence w
 
 # 10. Burndown Chart & Velocity
 
-## Iteration 2 Burndown
 
 <img width="761" height="460" alt="image" src="https://github.com/user-attachments/assets/7db7e40c-fd88-4200-93f7-0538a37468b3" />
 
@@ -304,4 +317,4 @@ Additionally, we maintained an updated Trello task board and tracked progress us
 
 ---
 
-*Elgooners Record Shelf · CSCI 2040U · Iteration 2 · March 2026*
+*Elgooners Record Shelf · CSCI 2040U · April 2026*
