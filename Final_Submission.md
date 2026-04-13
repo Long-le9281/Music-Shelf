@@ -24,7 +24,7 @@
 
 ---
 
-# 1. Project Overview
+#  Project Overview
 
 **Elgooners Record Shelf** — A full-stack music cataloguing app
 
@@ -47,21 +47,6 @@
 
 ---
 
-# 3. Version Control System
-
-## All Members Have Check-ins
-
-```
-Commit history
-```
-
-```
-10  Darius Kallistas
- 8  Brandon Dias
- 6  Danyal
- 5  Daniyal
- 6  Thanh Long Le
-```
 
 ---
 
@@ -78,30 +63,6 @@ git branch -a
   remotes/origin/Database-&-data-sourcing
   remotes/origin/main
 ```
-
----
-
-## Commit Graph (Main Trunk + Branches)
-
-```
-git log --all --graph --oneline --decorate -n 20
-```
-
-```
-* 682b8803 (HEAD -> Frontend) Add Lab9 demo scripts/tests and untrack conflicting IntelliJ metadata
-* ed333fcb merging new database logic - fixed ui bugs
-* fe79b61c merging new database logic
-*   6936b172 Merge Updating-Database into Frontend
- \
-  * 0a37ead1 (Updating-Database) Finished Database
-  * 88af5c7d Made some changes
-* c1206968 (main) Add MVP walkthrough documentation
-```
-
-**Trunk:** `main`  
-**Feature branches merged:** `Updating-Database`, `new-stack`, `new-ui`, `Frontend`
-
----
 
 ---
 
@@ -128,7 +89,7 @@ mvn -Dtest=Iteration3ToDoColumnRedDemo test
 
 ---
 
-## 🔴 Red Test Results (Intentional — Features Not Built Yet)
+## 🔴 EXAMPLE: Red Test Results (Intentional — Features Not Built Yet)
 
 ```
 ✘ Iteration3ToDoColumnRedDemo                              20 ms
@@ -176,8 +137,6 @@ Release-scope unit-test execution was verified from Maven Surefire reports in `b
 
 ---
 
----
-
 # 6. Integration Test Final Report
 
 Integration testing validated interactions between controllers, persistence, auth/security context, and API contracts.
@@ -199,8 +158,6 @@ Integration testing validated interactions between controllers, persistence, aut
 
 ### Final Outcome
 All planned integration scenarios were run. The resulting report documents the executed outcome for each `IT-*` case and records the bugs/regression risks that were re-verified and closed before sign-off.
-
----
 
 ---
 
@@ -261,7 +218,9 @@ This project deliberately mixes all three testing views to maximize confidence w
 ---
 # 9. Task Board (Updated)
 
-<img width="1072" height="905" alt="Updated burn-down" src="https://github.com/user-attachments/assets/d0345a48-0dc7-48e5-8aab-97369b19593b" />
+
+<img width="1055" height="883" alt="image" src="https://github.com/user-attachments/assets/5e704f4d-cc9d-4f40-b7fe-83106db3945d" />
+
 
 
 ---
@@ -272,14 +231,16 @@ This project deliberately mixes all three testing views to maximize confidence w
 
 ## Iteration 2 Burndown
 
-<img width="600" height="371" alt="Iteration_2_Finalized_Burndown_Chart" src="https://github.com/user-attachments/assets/3409f619-1b3a-404d-8ef5-1be5120a9f98" />
+<img width="761" height="460" alt="image" src="https://github.com/user-attachments/assets/7db7e40c-fd88-4200-93f7-0538a37468b3" />
+
 
 
 ---
 
 ## Velocity Calculation
 
-Velocity = (3.5 tasks) / 4 total  =  0.87 for sprint 2
+<img width="1077" height="346" alt="image" src="https://github.com/user-attachments/assets/4fbdb99b-e01b-4a0c-82c6-01201180c37a" />
+
 
 
 # 11. Testing Observations and Defects Resolved
@@ -299,6 +260,7 @@ Velocity = (3.5 tasks) / 4 total  =  0.87 for sprint 2
 - **Testing Spring Security context** was complex; `@AuthenticationPrincipal` paths required explicit `UserDetails` setup to avoid `NullPointerException` in controller tests.
 - **`Map.of(...)` limitations** mattered in tests because immutable mock rows broke controller paths that append fields or tolerate nulls.
 - **Startup timing in the browser** needed documentation because the app can briefly show `connection refused` before both services are fully ready.
+- **Team Synergy** Figuring out how to work on a single software  as a cohesive team
 
 ---
 
