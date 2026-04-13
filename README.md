@@ -58,6 +58,8 @@ After startup:
 - Backend URL: `http://localhost:8080`
 - Frontend URL: `http://localhost:3000`
 
+### Demo video can be found under Music-Shelf/Final-Demo.mp4
+
 ### Start backend and frontend separately
 If you want to launch each service in its own step, use these scripts from the repo root:
 
