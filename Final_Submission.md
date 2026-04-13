@@ -284,7 +284,7 @@ This project deliberately mixes all three testing views to maximize confidence w
 ---
 
 
-## 12. Summary, Remaining Gaps, and Submission Sync
+## 12. Summary Submission Sync
 
 | Rubric Item | Status |
 |------------|--------|
@@ -304,11 +304,6 @@ This project deliberately mixes all three testing views to maximize confidence w
 | Bug fixes completed/mitigated |  5 documented bugs addressed in this branch (4 fixed, 1 mitigated) |
 | Testing observations |  Useful + difficult aspects covered |
 
-In this iteration our team further developed Music-Shelf, a full-stack music catalog website built using a Java Spring Boot backend and a React frontend. Within this iteration we successfully implemented an improved looking UI, along with core user-facing features such as account authentication, album browsing, playlist creation, search functionality, and user profile management.
-
-We followed a collaborative workflow using Git with multiple branches and consistent contributions from all team members, ensuring organized development and integration. A key focus of the iteration was Test-Driven Development, where tests were written prior to or alongside implementation. The final test report now records executed results across unit, integration, and system layers and shows that all planned shipped-scope tests were run, with defects documented and resolved before sign-off.
-
-Additionally, we maintained an updated Trello task board and tracked progress using a burndown chart, achieving a sprint velocity of approximately 0.87. Through testing, we identified and addressed issues related to validation paths, authentication flow, data consistency, and startup/user-flow behavior. Overall this iteration strengthened both the technical implementation of our software system and our development practices.
 
 ## Bonus Mark: Web-Based Accessibility & Usability Enhancement
 
