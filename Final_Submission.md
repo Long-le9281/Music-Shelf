@@ -21,7 +21,28 @@ https://github.com/Long-le9281/Music-Shelf
 13. Summary, Remaining Gaps, and Submission Sync
 
 ---
+## Build and Run
 
+### Recommended startup on Windows
+From the repo root (`Music-Shelf`), run:
+
+```powershell
+Set-Location "C:\Users\PC\Desktop\Music-Shelf"
+.\run.bat
+```
+
+This launcher:
+- checks that Java, Maven, and npm are available
+- offers first-time setup help if `setup.sh` is present and setup has not been completed yet
+- starts the backend on port `8080`
+- waits briefly, then starts the frontend on port `3000`
+- opens the frontend in your browser
+
+After startup:
+- Backend URL: `http://localhost:8080`
+- Frontend URL: `http://localhost:3000`
+
+### Demo video can be found under Music-Shelf/Final-Demo.mp4
 ---
 
 #  Project Overview
