@@ -26,7 +26,7 @@
 
 #  Project Overview
 
-**Elgooners Record Shelf** — A full-stack music cataloguing app
+**Elgooners Record Shelf**  A full-stack music cataloguing app
 
 | Layer | Technology |
 |-------|-----------|
@@ -91,7 +91,7 @@ Write failing test first  →  Confirm RED  →  Implement feature  →  Confirm
 ---
 
 
-## 🔴 EXAMPLE: Red Test Results (Intentional — Features Not Built Yet)
+## 🔴 EXAMPLE: Red Test Results (Intentional, Features Not Built Yet)
 
 ```
 ✘ Iteration3ToDoColumnRedDemo                              20 ms
@@ -102,7 +102,7 @@ Write failing test first  →  Confirm RED  →  Implement feature  →  Confirm
 ```
 
 
-> They pass once the features are built — that's the green phase.
+> They pass once the features are builtm, that's the green phase.
 
 ---
 
@@ -247,7 +247,7 @@ This project deliberately mixes all three testing views to maximize confidence w
 
 ## What We Found Useful
 
-- **Unit tests caught real logic bugs early** — edge-case coverage around malformed JWTs, rating bounds, and empty search kept controller behavior locked down before release.
+- **Unit tests caught real logic bugs early**  edge-case coverage around malformed JWTs, rating bounds, and empty search kept controller behavior locked down before release.
 - **Mocking the Database class** made tests fast and isolated; the executed release-scope unit suite completed quickly without touching the runtime SQLite file.
 - **Integration/system re-checks were valuable** because they verified that writes were visible across read models, playlist counts stayed consistent, and admin-role changes unlocked the expected UI/API behavior.
 
@@ -289,9 +289,24 @@ We followed a collaborative workflow using Git with multiple branches and consis
 
 Additionally, we maintained an updated Trello task board and tracked progress using a burndown chart, achieving a sprint velocity of approximately 0.87. Through testing, we identified and addressed issues related to validation paths, authentication flow, data consistency, and startup/user-flow behavior. Overall this iteration strengthened both the technical implementation of our software system and our development practices.
 
+## Bonus Mark: Web-Based Accessibility & Usability Enhancement
 
-### Remaining Gaps
-- Iteration 3 features remain intentionally red/TODO (comments, friends discovery, genre sort, listen metrics).
+**Statement:**
+
+Elgooners Record Shelf is a fully-fledged web application that enhances accessibility and usability across multiple dimensions:
+
+1. **Cross-Platform Accessibility**  The React-based web interface runs on any device with a modern browser (desktop, tablet, mobile), eliminating platform-specific barriers and enabling users to access their music library from anywhere.
+
+2. **Intuitive Search & Discovery**  Multi-dimensional search (title, artist, genre) combined with visual carousel browsing reduces cognitive load and provides inclusive pathways for users with different browsing preferences.
+
+3. **Personalized User Profiles**  Public profile pages allow collaborative discovery and sharing within the music community, fostering social accessibility and user engagement.
+
+4. **Role-Based Access Control**  Admin user management via web interface ensures secure, accessible delegation of platform moderation without requiring database-level access.
+
+5. **Responsive Visual Feedback**  Star ratings, playlist counts, and real-time album details provide immediate, clear feedback to guide user actions and reduce navigation friction.
+
+These design choices ensure that the web-based platform is not only functional but actively enhances how users discover, organize, and share their music collections.
+
 
 ### Submission Sync Checklist
 - **Single source of truth:** Edit `PRESENTATION.md` for final deck content.
