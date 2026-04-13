@@ -106,6 +106,8 @@ npm start
 - User profiles
 - Playlist CRUD + song/album playlist actions
 - Admin user management endpoints
+- Users can edit their profile bio
+- Users can search and view other User Profiles
 
 ## Troubleshooting
 - `mvn: command not found` -> install Maven and ensure it is in PATH.
