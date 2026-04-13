@@ -116,9 +116,9 @@ Release-scope unit-test execution was verified from Maven Surefire reports in `b
 
 | Test File | Tests Run | Failures | Errors | Skipped | Final Status |
 |------|---:|---:|---:|---:|---|
-| `JwtHelperTest.java` | 2 | 0 | 0 | 0 | ✅ Pass |
-| `Iteration1DoneColumnTest.java` | 4 | 0 | 0 | 0 | ✅ Pass |
-| `Iteration2InProgressColumnTest.java` | 4 | 0 | 0 | 0 | ✅ Pass |
+| `JwtHelperTest.java` | 2 | 0 | 0 | 0 |  Pass |
+| `Iteration1DoneColumnTest.java` | 4 | 0 | 0 | 0 |  Pass |
+| `Iteration2InProgressColumnTest.java` | 4 | 0 | 0 | 0 |  Pass |
 
 **Release-scope result:** `10 / 10 passed`
 
@@ -157,7 +157,7 @@ Integration testing validated interactions between controllers, persistence, aut
 - Admin role transition and admin-user-management access
 
 ### Final Outcome
-All planned integration scenarios were run. The resulting report documents the executed outcome for each `IT-*` case and records the bugs/regression risks that were re-verified and closed before sign-off.
+All planned integration scenarios were run. The resulting report documents the executed outcome for each `IT-*` case and records the bugs/regression risks that were re-verified and closed before sign-off. Further testing documentation can be found under" Music-Shelf/docs"
 
 ---
 
@@ -269,21 +269,21 @@ This project deliberately mixes all three testing views to maximize confidence w
 
 | Rubric Item | Status |
 |------------|--------|
-| Build files & scripts | ✅ `pom.xml`, `package.json` |
-| New dev setup docs | ✅ `README.md`, `QUICK_START.md` |
-| All members checked in | ✅ 5 contributors across 6 branches |
-| Trunk + branches shown | ✅ `main`, `Frontend`, `Updating-Database` |
-| TDD red test shown | ✅ `Iteration3ToDoColumnRedDemo` |
-| Full test suite | ✅ Final report covers 10 executed release-scope unit tests, 6 integration scenarios, and 12 system scenarios |
-| Integration testing report | ✅ `docs/INTEGRATION_TESTS.md` updated with executed results and resolved defects |
-| System testing report | ✅ `docs/SYSTEM_TESTS.md` updated with executed results and resolved defects |
-| Coverage demonstration (CB/TB/OB) | ✅ Explicit rationale and mapping provided |
-| Task board updated | ✅ Done 8 / In Progress 2 / To Do 4 |
-| Burndown chart | ✅ Iteration 2 complete |
-| Velocity calculated | ✅ 10.5 story points / sprint |
-| Bugs identified | ✅ 5 bugs documented |
-| Bug fixes completed/mitigated | ✅ 5 documented bugs addressed in this branch (4 fixed, 1 mitigated) |
-| Testing observations | ✅ Useful + difficult aspects covered |
+| Build files & scripts |  `pom.xml`, `package.json` |
+| New dev setup docs |  `README.md`, `QUICK_START.md` |
+| All members checked in |  5 contributors across 6 branches |
+| Trunk + branches shown |  `main`, `Frontend`, `Updating-Database` |
+| TDD red test shown |  `Iteration3ToDoColumnRedDemo` |
+| Full test suite |  Final report covers 10 executed release-scope unit tests, 6 integration scenarios, and 12 system scenarios |
+| Integration testing report |  `docs/INTEGRATION_TESTS.md` updated with executed results and resolved defects |
+| System testing report |  `docs/SYSTEM_TESTS.md` updated with executed results and resolved defects |
+| Coverage demonstration (CB/TB/OB) |  Explicit rationale and mapping provided |
+| Task board updated |  Done 8 / In Progress 2 / To Do 4 |
+| Burndown chart |  Iteration 2 complete |
+| Velocity calculated |  10.5 story points / sprint |
+| Bugs identified |  5 bugs documented |
+| Bug fixes completed/mitigated |  5 documented bugs addressed in this branch (4 fixed, 1 mitigated) |
+| Testing observations |  Useful + difficult aspects covered |
 
 In this iteration our team further developed Music-Shelf, a full-stack music catalog website built using a Java Spring Boot backend and a React frontend. Within this iteration we successfully implemented an improved looking UI, along with core user-facing features such as account authentication, album browsing, playlist creation, search functionality, and user profile management.
 
