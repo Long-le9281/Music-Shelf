@@ -101,7 +101,7 @@ Write failing test first  →  Confirm RED  →  Implement feature  →  Confirm
   ✘ EL-5  Number/total time of song listens is not implemented yet  1 ms
 ```
 
-> These tests define the **contract for Iteration 3**.  
+
 > They pass once the features are built — that's the green phase.
 
 ---
@@ -133,9 +133,6 @@ Release-scope unit-test execution was verified from Maven Surefire reports in `b
 - `EL-2` seeded song sourcing
 - `EL-17` album detail song payload
 - `EL-3` admin role mutation
-
-### Backlog / Red-Phase Tracking
-`Iteration3ToDoColumnRedDemo.java` is retained as a red-phase TDD specification for out-of-release Iteration 3 backlog items (`EL-15`, `EL-20`, `EL-16`, `EL-5`). Those tests are documented in the final report but excluded from the shipped-scope pass rate.
 
 ---
 
